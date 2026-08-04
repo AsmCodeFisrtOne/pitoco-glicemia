@@ -489,7 +489,7 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
           <tr><td>Dias com registro</td><td>Quantos dias do mês têm pelo menos um lançamento, sobre o total de dias do mês — indica o quão completa é a amostra.</td></tr>
           <tr><td>Distribuição por horário</td><td>Média da glicemia separada em 4 janelas do dia: madrugada (0-6h), manhã (6-12h), tarde (12-18h) e noite (18-24h).</td></tr>
           <tr><td>Glicemia × dose de insulina</td><td>Gráfico de dispersão para visualizar se doses maiores tendem a resultar em glicemias mais baixas.</td></tr>
-          <tr><td>Piores episódios</td><td>As 3 leituras mais baixas (hipo) e as 3 mais altas (hiper) do mês.</td></tr>
+          <tr><td>Piores episódios</td><td>As 3 leituras mais baixas (abaixo do alvo) e as 3 mais altas (acima do alvo) do mês.</td></tr>
           <tr><td>Observações da veterinária</td><td>Campo de texto livre, salvo automaticamente por mês.</td></tr>
         </tbody>
       </table>
@@ -604,7 +604,8 @@ function initApp(){
   });
 
   db.collection('registros').orderBy('dataGlicemia','desc').onSnapshot(snap=>{
-    registros = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    registros = snap.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b)=> new Date(b.dataGlicemia) - new Date(a.dataGlicemia) || new Date(b.createdAt||0) - new Date(a.createdAt||0));
     renderUltimaLeitura();
     renderMonths();
     populateMesSelect();
@@ -986,10 +987,18 @@ function salvarRegistro(){
   const glicemia = parseFloat(document.getElementById('in-glicemia').value);
   if(isNaN(glicemia)){ alert('Informe a glicemia.'); return; }
   const dataGlicemia = document.getElementById('in-data-glicemia').value || toLocalInput(new Date());
+  const dataGlicemiaISO = new Date(dataGlicemia).toISOString();
+
+  const duplicado = registros.find(r => r.dataGlicemia === dataGlicemiaISO && r.id !== editingId);
+  if(duplicado){
+    alert(`Já existe um lançamento registrado exatamente em ${fmtDate(duplicado.dataGlicemia)} (glicemia ${duplicado.glicemia} mg/dL).\n\nAjuste o minuto da data/hora deste lançamento antes de salvar, para não confundir com o outro.`);
+    return;
+  }
+
   const dado = {
     petId: PET_ID,
     glicemia: glicemia,
-    dataGlicemia: new Date(dataGlicemia).toISOString(),
+    dataGlicemia: dataGlicemiaISO,
     insulinaDose: parseFloat(document.getElementById('in-insulina').value) || null,
     insulinaTipo: document.getElementById('in-tipo-insulina').value || null,
     dataInsulina: document.getElementById('in-data-insulina').value ? new Date(document.getElementById('in-data-insulina').value).toISOString() : null,
@@ -1202,11 +1211,11 @@ function renderMensal(){
 
     <div class="two-col">
       <div>
-        <h3>Piores episódios — hipoglicemia</h3>
+        <h3>Piores episódios — abaixo do alvo</h3>
         <ul class="top-episodes">${topHipo.length? topHipo.map(r=>`<li><span>${fmtDate(r.dataGlicemia)}</span><span class="mono" style="color:var(--danger)">${r.glicemia} mg/dL</span></li>`).join('') : '<li>Nenhum episódio relevante</li>'}</ul>
       </div>
       <div>
-        <h3>Piores episódios — hiperglicemia</h3>
+        <h3>Piores episódios — acima do alvo</h3>
         <ul class="top-episodes">${topHiper.length? topHiper.map(r=>`<li><span>${fmtDate(r.dataGlicemia)}</span><span class="mono" style="color:var(--accent)">${r.glicemia} mg/dL</span></li>`).join('') : '<li>Nenhum episódio relevante</li>'}</ul>
       </div>
     </div>
