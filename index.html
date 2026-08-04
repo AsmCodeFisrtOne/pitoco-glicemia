@@ -213,6 +213,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
     <input type="password" id="gate-pass" placeholder="Senha de acesso" autocomplete="off">
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
+    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;"></div>
   </div>
 </div>
 
@@ -512,6 +513,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
+const APP_VERSION = "Beta_Rev000.1"; // incrementar em +0.1 a cada atualização entregue
 
 const firebaseConfig = {
   apiKey: "AIzaSyBkSYWwtJ7YwXO3jGo6WEVC3gGdidX8wPk",
@@ -568,6 +570,7 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   window.addEventListener('DOMContentLoaded', initApp);
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
+document.getElementById('gate-version').textContent = APP_VERSION;
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const det = document.querySelector('details.more-details');
@@ -1179,6 +1182,66 @@ function populateMesSelect(){
   sel.innerHTML = keys.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join('') || '<option value="">—</option>';
   if(keys.includes(atual)) sel.value = atual;
 }
+function agregarPorDia(lista){
+  const porDia = {};
+  lista.forEach(r=>{
+    const chave = new Date(r.dataGlicemia).toLocaleDateString('pt-BR');
+    (porDia[chave] = porDia[chave]||[]).push(r.glicemia);
+  });
+  return Object.keys(porDia).map(chave=>({
+    label: chave,
+    media: mean(porDia[chave]),
+    min: Math.min(...porDia[chave]),
+    max: Math.max(...porDia[chave]),
+    n: porDia[chave].length
+  }));
+}
+function renderChartMensalLinha(modo){
+  const lista = window._listaMensalAtual;
+  const ctx1 = document.getElementById('chart-mensal-linha').getContext('2d');
+  if(mensalChart1) mensalChart1.destroy();
+
+  if(modo === 'diario'){
+    const dias = agregarPorDia(lista);
+    mensalChart1 = new Chart(ctx1, {
+      type:'line',
+      data:{ labels: dias.map(d=>d.label), datasets:[
+        { label:'Média do dia', data: dias.map(d=>d.media), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:false, tension:0.2, pointRadius:3, pointHitRadius:12 },
+        { label:'Máximo do dia', data: dias.map(d=>d.max), borderColor:'rgba(232,163,61,0.5)', borderDash:[4,4], pointRadius:0, fill:'+1' },
+        { label:'Mínimo do dia', data: dias.map(d=>d.min), borderColor:'rgba(76,154,106,0.5)', borderDash:[4,4], pointRadius:0, fill:false }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+        plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}}}, title:{display:true,text:'Média diária (faixa mín–máx sombreada)'},
+          tooltip:{ callbacks:{ afterTitle:(items)=>{ const d = dias[items[0].dataIndex]; return `${d.n} leitura(s) neste dia`; } } } },
+        scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
+    });
+  } else {
+    mensalChart1 = new Chart(ctx1, {
+      type:'line',
+      data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[{
+        label:'Glicemia', data: lista.map(r=>r.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.2, pointRadius:2, pointHitRadius:12
+      }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        interaction:{ mode:'index', intersect:false },
+        plugins:{legend:{display:false}, title:{display:true,text:'Glicemia ao longo do mês (cada leitura)'},
+        tooltip:{ callbacks:{ title: (items)=> new Date(lista[items[0].dataIndex].dataGlicemia).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) } } },
+        scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
+    });
+  }
+}
+function setChartView(modo){
+  window._chartViewMode = modo;
+  renderChartMensalLinha(modo);
+  atualizarBotoesChartView();
+}
+function atualizarBotoesChartView(){
+  const modo = window._chartViewMode;
+  const bd = document.getElementById('btn-view-diario');
+  const bb = document.getElementById('btn-view-bruto');
+  if(!bd || !bb) return;
+  bd.classList.toggle('secondary', modo!=='diario');
+  bb.classList.toggle('secondary', modo!=='bruto');
+}
 function renderMensal(){
   const key = document.getElementById('mensal-select').value;
   const content = document.getElementById('mensal-content');
@@ -1233,7 +1296,13 @@ function renderMensal(){
     <div class="notice">${tendencia}${sPrev? ` (mês anterior: ${sPrev.media.toFixed(0)} mg/dL)`:''}</div>
 
     <div class="two-col">
-      <div class="chart-wrap"><canvas id="chart-mensal-linha" height="200"></canvas></div>
+      <div>
+        <div class="btn-row" id="chart-view-toggle" style="margin-bottom:4px;justify-content:center">
+          <button class="btn secondary" id="btn-view-diario" onclick="setChartView('diario')" style="font-size:12px;padding:6px 10px">Média diária</button>
+          <button class="btn secondary" id="btn-view-bruto" onclick="setChartView('bruto')" style="font-size:12px;padding:6px 10px">Cada leitura</button>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-mensal-linha" height="200"></canvas></div>
+      </div>
       <div class="chart-wrap"><canvas id="chart-mensal-scatter" height="200"></canvas></div>
     </div>
 
@@ -1271,20 +1340,12 @@ function renderMensal(){
     }
   });
 
-  // gráfico linha
-  const ctx1 = document.getElementById('chart-mensal-linha').getContext('2d');
-  if(mensalChart1) mensalChart1.destroy();
-  mensalChart1 = new Chart(ctx1, {
-    type:'line',
-    data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[{
-      label:'Glicemia', data: lista.map(r=>r.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.2, pointRadius:2, pointHitRadius:12
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      interaction:{ mode:'index', intersect:false },
-      plugins:{legend:{display:false}, title:{display:true,text:'Glicemia ao longo do mês'},
-      tooltip:{ callbacks:{ title: (items)=> new Date(lista[items[0].dataIndex].dataGlicemia).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) } } },
-      scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
-  });
+  // gráfico linha — alterna entre "cada leitura" e "média diária" (útil quando o mês tem muitos pontos)
+  window._listaMensalAtual = lista;
+  const modoDefault = lista.length > 60 ? 'diario' : 'bruto';
+  window._chartViewMode = window._chartViewMode || modoDefault;
+  renderChartMensalLinha(window._chartViewMode);
+  atualizarBotoesChartView();
 
   // gráfico dispersão glicemia x insulina
   const comInsulina = lista.filter(r=>r.insulinaDose);
