@@ -94,7 +94,7 @@ textarea{resize:vertical;min-height:56px;}
 .gauge{position:relative;height:34px;border-radius:999px;background:linear-gradient(to right,
   var(--danger) 0%, var(--danger) 20%, var(--accent-tint) 20%, var(--accent-tint) 33%,
   var(--target) 33%, var(--target) 62%, var(--accent-tint) 62%, var(--accent-tint) 75%, var(--accent) 75%, var(--accent) 100%);
-  margin:10px 0 6px;}
+  margin:34px 0 6px;}
 .gauge .marker{position:absolute;top:-6px;width:3px;height:46px;background:var(--ink);border-radius:2px;transform:translateX(-50%);}
 .gauge .marker::after{content:attr(data-val);position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
 .gauge-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:18px;}
@@ -211,6 +211,12 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
 .cm-message{font-size:13.5px;color:var(--ink);line-height:1.5;white-space:pre-line;margin-bottom:16px;}
 .cm-input{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:14px;}
 .cm-actions{display:flex;justify-content:flex-end;gap:8px;}
+.cm-box.grande{max-width:420px;padding:0;overflow:hidden;}
+.cm-box.grande .cm-header{background:var(--danger);padding:26px 22px 18px;margin:0;flex-direction:column;text-align:center;gap:6px;}
+.cm-box.grande .cm-icon{width:64px;height:64px;font-size:32px;background:rgba(255,255,255,0.25);color:#fff;margin-bottom:4px;}
+.cm-box.grande .cm-title{color:#fff;font-size:19px;}
+.cm-box.grande .cm-message{padding:20px 22px 6px;font-size:15px;text-align:center;color:var(--ink);}
+.cm-box.grande .cm-actions{padding:16px 22px 24px;justify-content:center;}
 </style>
 </head>
 <body>
@@ -249,6 +255,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
     <button data-tab="mensal">Relatório mensal</button>
     <button data-tab="ficha">Ficha do Pitoco</button>
     <button data-tab="config">Configurações</button>
+    <button data-tab="exames">Exames</button>
     <button data-tab="manual">Manual</button>
   </nav>
 
@@ -262,6 +269,10 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
 
     <div class="card">
       <h2>Novo lançamento</h2>
+      <div class="field">
+        <button class="btn secondary" type="button" onclick="iniciarPreenchimentoPorVoz()" id="btn-voz">🎙️ Preencher por voz</button>
+        <p style="font-size:11.5px;color:var(--muted);margin-top:6px">A entrada por voz é resumida e limitada — funciona melhor em ambiente silencioso, com respostas curtas (ex: "duzentos", "quatro", "NPH"). Revise os campos preenchidos antes de salvar.</p>
+      </div>
       <div class="grid">
         <div class="field">
           <label>Glicemia (mg/dL)</label>
@@ -439,6 +450,35 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
   </section>
 
   <!-- ---------- MANUAL ---------- -->
+  <!-- ---------- EXAMES ---------- -->
+  <section class="panel" id="tab-exames">
+    <div class="card">
+      <h2>Novo exame</h2>
+      <div class="notice">Anexar o PDF é opcional. Como o banco de dados é gratuito, arquivos ficam limitados a cerca de 700 KB — a maioria dos PDFs de exame de rotina cabe tranquilamente. Se o arquivo for maior, preencha os campos abaixo mesmo assim (funcionam sem o anexo).</div>
+      <div class="grid">
+        <div class="field"><label>Título do exame</label><input type="text" id="ex-titulo" placeholder="Ex: Hemograma completo"></div>
+        <div class="field"><label>Data do exame</label><input type="date" id="ex-data"></div>
+      </div>
+      <div class="grid">
+        <div class="field"><label>Tipo</label>
+          <select id="ex-tipo">
+            <option>Hemograma</option><option>Bioquímico</option><option>Curva glicêmica laboratorial</option>
+            <option>Frutosamina</option><option>Urinálise</option><option>Ultrassom</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="field"><label>Veterinária/laboratório responsável</label><input type="text" id="ex-vet" placeholder="Opcional"></div>
+      </div>
+      <div class="field"><label>Resultado resumido</label><textarea id="ex-resultado" placeholder="Ex: Glicemia de jejum 210 mg/dL, dentro do esperado para o tratamento atual"></textarea></div>
+      <div class="field"><label>Observações / valores de referência</label><textarea id="ex-obs" placeholder="Opcional"></textarea></div>
+      <div class="field"><label>Anexar PDF (opcional, até ~700 KB)</label><input type="file" id="ex-arquivo" accept="application/pdf"></div>
+      <button class="btn" onclick="salvarExame()">Salvar exame</button>
+    </div>
+    <div class="card">
+      <h2>Exames registrados</h2>
+      <div id="exames-lista"><div class="empty">Nenhum exame registrado ainda.</div></div>
+    </div>
+  </section>
+
   <section class="panel" id="tab-manual">
     <div class="card">
       <h2>Senhas exigidas no app</h2>
@@ -536,17 +576,23 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.3"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.4"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
-function _showCustomModal({message, title='Atenção', icon='⚠️', mode='alert', inputType='text'}){
+function _showCustomModal({message, title='Atenção', icon='⚠️', mode='alert', inputType='text', grande=false}){
   return new Promise(resolve=>{
     const overlay = document.getElementById('custom-modal-overlay');
+    const box = overlay.querySelector('.cm-box');
+    box.classList.toggle('grande', grande);
     document.getElementById('cm-title').textContent = title;
     const iconEl = document.getElementById('cm-icon');
     iconEl.textContent = icon;
-    iconEl.style.background = icon==='✅' ? 'var(--target-tint)' : 'var(--danger-tint)';
-    iconEl.style.color = icon==='✅' ? 'var(--target)' : 'var(--danger)';
+    if(grande){
+      iconEl.style.background = ''; iconEl.style.color = '';
+    } else {
+      iconEl.style.background = icon==='✅' ? 'var(--target-tint)' : 'var(--danger-tint)';
+      iconEl.style.color = icon==='✅' ? 'var(--target)' : 'var(--danger)';
+    }
     document.getElementById('cm-message').textContent = message;
     const input = document.getElementById('cm-input');
     const actions = document.getElementById('cm-actions');
@@ -587,6 +633,7 @@ function _showCustomModal({message, title='Atenção', icon='⚠️', mode='aler
   });
 }
 function customAlert(message, title='Atenção', icon='⚠️'){ return _showCustomModal({message, title, icon, mode:'alert'}); }
+function customAlertPerigo(message, title){ return _showCustomModal({message, title, icon:'🚨', mode:'alert', grande:true}); }
 function customConfirm(message, title='Atenção'){ return _showCustomModal({message, title, mode:'confirm'}); }
 function customPrompt(message, title='Atenção', inputType='text'){ return _showCustomModal({message, title, mode:'prompt', inputType}); }
 
@@ -673,6 +720,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab==='semanal') renderSemanal();
     if(btn.dataset.tab==='mensal') { populateMesSelect(); renderMensal(); }
     if(btn.dataset.tab==='curva') renderCurvaTab();
+    if(btn.dataset.tab==='exames') renderExamesTab();
   });
 });
 
@@ -724,6 +772,11 @@ function initApp(){
   db.collection('curvas').orderBy('inicio','desc').limit(30).onSnapshot(snap=>{
     curvas = snap.docs.map(d=>({id:d.id, ...d.data()}));
     renderCurvaTab();
+  });
+
+  db.collection('exames').orderBy('data','desc').onSnapshot(snap=>{
+    exames = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderExamesTab();
   });
 }
 
@@ -915,7 +968,7 @@ function renderCurvaTab(){
         <ul class="curve-points">${[...ativa.pontos].sort((a,b)=>new Date(a.horario)-new Date(b.horario)).map(p=>{
           const cls = classifica(p.glicemia);
           const cor = cls==='hipo'?'var(--danger)':cls==='hiper'?'var(--accent)':cls==='alvo'?'var(--target)':'inherit';
-          return `<li><span class="t">${new Date(p.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span><span class="v" style="color:${cor}">${p.glicemia} mg/dL</span></li>`;
+          return `<li><span class="t">${new Date(p.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${p.observacao?` <span style="color:var(--muted);font-style:italic">— ${p.observacao}</span>`:''}</span><span class="v" style="color:${cor}">${p.glicemia} mg/dL</span></li>`;
         }).join('')}</ul>
         ${proxima ? `<div class="notice">Próxima leitura sugerida: por volta das ${proxima.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} (a cada 2h)</div>` : ''}
         <h3>Novo ponto</h3>
@@ -923,6 +976,7 @@ function renderCurvaTab(){
           <div class="field"><label>Glicemia (mg/dL)</label><input type="number" id="curva-novo-ponto" placeholder="Ex: 150"></div>
           <div class="field"><label>Horário</label><input type="datetime-local" id="curva-novo-horario" value="${toLocalInput(new Date())}"></div>
         </div>
+        <div class="field"><label>Observação (opcional — ex: atividade física, estresse)</label><input type="text" id="curva-novo-obs" placeholder="Opcional"></div>
         <div class="btn-row">
           <button class="btn" onclick="adicionarPontoCurva('${ativa.id}')">Adicionar ponto</button>
           <button class="btn secondary" onclick="finalizarCurva('${ativa.id}')">Finalizar curva</button>
@@ -960,6 +1014,7 @@ async function adicionarPontoCurva(id){
   const glic = parseFloat(document.getElementById('curva-novo-ponto').value);
   if(isNaN(glic)){ await customAlert('Informe a glicemia.'); return; }
   const horario = new Date(document.getElementById('curva-novo-horario').value || new Date()).toISOString();
+  const observacao = document.getElementById('curva-novo-obs').value.trim() || null;
   const ativa = curvas.find(c=>c.id===id);
 
   const duplicado = ativa.pontos.find(p => p.horario === horario);
@@ -968,7 +1023,7 @@ async function adicionarPontoCurva(id){
     return;
   }
 
-  const novosPontos = [...ativa.pontos, { glicemia: glic, horario }];
+  const novosPontos = [...ativa.pontos, { glicemia: glic, horario, observacao }];
   db.collection('curvas').doc(id).update({ pontos: novosPontos });
 }
 async function finalizarCurva(id){
@@ -1122,8 +1177,13 @@ async function salvarRegistro(){
     ? db.collection('registros').doc(editingId).update(dado)
     : db.collection('registros').add({...dado, createdAt: new Date().toISOString()});
 
-  salvar.then(()=>{
+  salvar.then(async ()=>{
     limparForm();
+    if(glicemia < configParam.hipo){
+      await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — abaixo do limite de hipoglicemia (${configParam.hipo} mg/dL).\n\nMonitore o Pitoco de perto. Se houver sinais de fraqueza, tremores ou desorientação, contate a veterinária imediatamente.`, 'HIPOGLICEMIA DETECTADA');
+    } else if(glicemia > configParam.hiper){
+      await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — acima do limite de hiperglicemia (${configParam.hiper} mg/dL).\n\nMonitore o Pitoco e considere contatar a veterinária conforme orientação do tratamento.`, 'HIPERGLICEMIA DETECTADA');
+    }
   }).catch(async err=> await customAlert('Erro ao salvar: '+err.message));
 }
 function limparForm(){
@@ -1417,18 +1477,23 @@ function renderMensal(){
     </div>
 
     <h3>Observações da veterinária</h3>
-    <textarea id="obs-vet" placeholder="Anotações sobre este mês...">${(window._obsVetCache&&window._obsVetCache[key])||''}</textarea>
-    <div class="btn-row"><button class="btn secondary" onclick="salvarObsVet('${key}')">Salvar observação</button></div>
+    <div id="obs-vet-lista"><div class="empty">Nenhuma observação registrada ainda.</div></div>
+    <textarea id="obs-vet" placeholder="Nova observação sobre este mês..."></textarea>
+    <div class="btn-row"><button class="btn secondary" onclick="adicionarObsVet('${key}')">Adicionar observação</button></div>
   `;
 
-  // carregar obs vet salva
+  // carregar observações salvas (lista com data/hora, com migração do formato antigo de texto único)
   db.collection('relatoriosMensais').doc(key).get().then(doc=>{
+    window._obsVetCache = window._obsVetCache || {};
+    let obs = [];
     if(doc.exists){
-      window._obsVetCache = window._obsVetCache || {};
-      window._obsVetCache[key] = doc.data().observacoesVet || '';
-      const ta = document.getElementById('obs-vet');
-      if(ta) ta.value = window._obsVetCache[key];
+      obs = doc.data().observacoes || [];
+      if(!obs.length && doc.data().observacoesVet){
+        obs = [{texto: doc.data().observacoesVet, data: doc.data().updatedAt || new Date().toISOString()}];
+      }
     }
+    window._obsVetCache[key] = obs;
+    renderObsVetLista(key);
   });
 
   // gráfico linha — alterna entre "cada leitura" e "média diária" (útil quando o mês tem muitos pontos)
@@ -1448,28 +1513,207 @@ function renderMensal(){
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, title:{display:true,text:'Glicemia x dose de insulina'}},
       scales:{ x:{title:{display:true,text:'Insulina (UI)'}}, y:{title:{display:true,text:'Glicemia (mg/dL)'}} } }
   });
+
+  // guarda tudo que o relatório em PDF vai precisar, sem recalcular
+  window._mensalReportData = { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia };
 }
-function salvarObsVet(key){
-  const val = document.getElementById('obs-vet').value;
-  db.collection('relatoriosMensais').doc(key).set({observacoesVet: val, updatedAt: new Date().toISOString()}, {merge:true})
-    .then(()=>customAlert('Observação salva.', 'Sucesso', '✅'));
+function renderObsVetLista(key){
+  const el = document.getElementById('obs-vet-lista');
+  if(!el) return;
+  const obs = (window._obsVetCache && window._obsVetCache[key]) || [];
+  if(!obs.length){ el.innerHTML = '<div class="empty">Nenhuma observação registrada ainda.</div>'; return; }
+  el.innerHTML = [...obs].reverse().map(o=>`
+    <div style="padding:10px 0;border-bottom:1px solid var(--line)">
+      <div style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:3px">${fmtDate(o.data)}</div>
+      <div style="font-size:13.5px;white-space:pre-line">${o.texto}</div>
+    </div>`).join('');
+}
+async function adicionarObsVet(key){
+  const ta = document.getElementById('obs-vet');
+  const texto = ta.value.trim();
+  if(!texto){ await customAlert('Escreva uma observação antes de adicionar.'); return; }
+  const doc = await db.collection('relatoriosMensais').doc(key).get();
+  const atuais = (doc.exists && doc.data().observacoes) || [];
+  const novaLista = [...atuais, {texto, data: new Date().toISOString()}];
+  await db.collection('relatoriosMensais').doc(key).set({observacoes: novaLista}, {merge:true});
+  window._obsVetCache = window._obsVetCache || {};
+  window._obsVetCache[key] = novaLista;
+  ta.value = '';
+  renderObsVetLista(key);
+  await customAlert('Observação adicionada.', 'Sucesso', '✅');
 }
 
 /* ---------------- EXPORTAR PDF ---------------- */
-function exportarPDF(){
-  const el = document.getElementById('mensal-content');
-  const key = document.getElementById('mensal-select').value;
-  html2canvas(el, {scale:2, backgroundColor:'#ffffff'}).then(canvas=>{
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p','pt','a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const imgWidth = pageWidth - 40;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    pdf.setFontSize(16);
-    pdf.text(`Relatório glicêmico — Pitoco — ${monthLabel(key)}`, 20, 30);
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 20, 45, imgWidth, imgHeight);
-    pdf.save(`pitoco-relatorio-${key}.pdf`);
-  });
+/* ---------------- EXPORTAR PDF (relatório de texto real, não print de tela) ---------------- */
+async function exportarPDF(){
+  const d = window._mensalReportData;
+  if(!d){ await customAlert('Abra o relatório mensal antes de exportar.'); return; }
+  const { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia } = d;
+  const obs = (window._obsVetCache && window._obsVetCache[key]) || [];
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','pt','a4');
+  const PAGE_W = pdf.internal.pageSize.getWidth();
+  const PAGE_H = pdf.internal.pageSize.getHeight();
+  const MARGIN = 40;
+  const CONTENT_W = PAGE_W - MARGIN*2;
+  let y = MARGIN;
+  let pagina = 1;
+
+  const COR_PRIMARIA = [42,111,111], COR_MUTED = [110,120,120], COR_DANGER = [193,83,61], COR_ACCENT = [200,140,20], COR_TARGET = [76,154,106], COR_INK=[31,42,46];
+
+  function rodape(){
+    pdf.setFontSize(8); pdf.setTextColor(...COR_MUTED);
+    pdf.text(`Controle Glicêmico do Pitoco — ${typeof APP_VERSION!=='undefined'?APP_VERSION:''}`, MARGIN, PAGE_H-20);
+    pdf.text(`Página ${pagina}`, PAGE_W-MARGIN-40, PAGE_H-20);
+  }
+  function novaPagina(){
+    rodape();
+    pdf.addPage();
+    pagina++;
+    y = MARGIN;
+  }
+  function garantirEspaco(altura){
+    if(y + altura > PAGE_H - 50) novaPagina();
+  }
+  function titulo(texto, tamanho=18, cor=COR_INK){
+    garantirEspaco(tamanho+10);
+    pdf.setFont(undefined,'bold'); pdf.setFontSize(tamanho); pdf.setTextColor(...cor);
+    pdf.text(texto, MARGIN, y);
+    y += tamanho + 8;
+  }
+  function subtitulo(texto, tamanho=10, cor=COR_MUTED){
+    garantirEspaco(tamanho+6);
+    pdf.setFont(undefined,'normal'); pdf.setFontSize(tamanho); pdf.setTextColor(...cor);
+    pdf.text(texto, MARGIN, y);
+    y += tamanho + 6;
+  }
+  function secao(texto){
+    garantirEspaco(26);
+    y += 6;
+    pdf.setDrawColor(...COR_PRIMARIA); pdf.setLineWidth(1.2);
+    pdf.line(MARGIN, y, PAGE_W-MARGIN, y);
+    y += 16;
+    pdf.setFont(undefined,'bold'); pdf.setFontSize(13); pdf.setTextColor(...COR_PRIMARIA);
+    pdf.text(texto, MARGIN, y);
+    y += 16;
+  }
+  function paragrafo(texto, tamanho=10){
+    pdf.setFont(undefined,'normal'); pdf.setFontSize(tamanho); pdf.setTextColor(...COR_INK);
+    const linhas = pdf.splitTextToSize(texto, CONTENT_W);
+    garantirEspaco(linhas.length*(tamanho+3));
+    pdf.text(linhas, MARGIN, y);
+    y += linhas.length*(tamanho+3) + 4;
+  }
+  function tabela(linhas, colWidths){
+    const rowH = 20;
+    garantirEspaco(rowH*(linhas.length+1));
+    let x = MARGIN;
+    pdf.setFillColor(...COR_PRIMARIA);
+    pdf.rect(MARGIN, y, CONTENT_W, rowH, 'F');
+    pdf.setTextColor(255,255,255); pdf.setFont(undefined,'bold'); pdf.setFontSize(9.5);
+    linhas[0].forEach((c,i)=>{ pdf.text(String(c), x+6, y+14); x += colWidths[i]; });
+    y += rowH;
+    for(let r=1; r<linhas.length; r++){
+      garantirEspaco(rowH);
+      if(r%2===0){ pdf.setFillColor(244,247,246); pdf.rect(MARGIN, y, CONTENT_W, rowH, 'F'); }
+      x = MARGIN;
+      pdf.setTextColor(...COR_INK); pdf.setFont(undefined,'normal'); pdf.setFontSize(9.5);
+      linhas[r].forEach((c,i)=>{ pdf.text(String(c), x+6, y+14); x += colWidths[i]; });
+      y += rowH;
+    }
+    y += 10;
+  }
+  function imagemGrafico(canvasId, legenda){
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    const ratio = canvas.height/canvas.width;
+    const w = CONTENT_W;
+    const h = w*ratio;
+    garantirEspaco(h+20);
+    pdf.addImage(canvas.toDataURL('image/png',1.0), 'PNG', MARGIN, y, w, h);
+    y += h + 4;
+    pdf.setFont(undefined,'italic'); pdf.setFontSize(8.5); pdf.setTextColor(...COR_MUTED);
+    pdf.text(legenda, MARGIN, y);
+    y += 16;
+  }
+
+  // ---------- CABEÇALHO ----------
+  titulo('Relatório Glicêmico Mensal', 19, COR_PRIMARIA);
+  subtitulo(`Pitoco — ${monthLabel(key)}`, 13, COR_INK);
+  subtitulo(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 9);
+  if(configPet && configPet.nome){
+    const idadeTxt = configPet.nascimento ? (()=>{ const n=new Date(configPet.nascimento), h=new Date(); let a=h.getFullYear()-n.getFullYear(); if(h.getMonth()<n.getMonth())a--; return `${a} ano(s)`; })() : '—';
+    subtitulo(`Paciente: ${configPet.nome} · Raça: ${configPet.raca||'—'} · Peso atual: ${configPet.peso||'—'} kg · Idade: ${idadeTxt}`, 9);
+  }
+
+  // ---------- RESUMO ESTATÍSTICO ----------
+  secao('Resumo estatístico do mês');
+  tabela([
+    ['Parâmetro','Valor'],
+    ['Média de glicemia', `${s.media.toFixed(0)} mg/dL`],
+    ['Desvio padrão', s.dp.toFixed(1)],
+    ['Coeficiente de variação (CV)', `${cv.toFixed(1)}%`],
+    ['Tempo no alvo', `${s.pctAlvo.toFixed(0)}%`],
+    ['Episódios de hipoglicemia (< '+configParam.hipo+' mg/dL)', String(s.hipoN)],
+    ['Episódios de hiperglicemia (> '+configParam.hiper+' mg/dL)', String(s.hiperN)],
+    ['Insulina total aplicada', `${s.insulinaTotal.toFixed(1)} UI`],
+    ['Insulina média por dose', `${(s.insulinaMedia||0).toFixed(1)} UI`],
+    ['Dias com registro', `${diasComRegistro} de ${totalDias}`],
+    ['Faixa alvo configurada', `${configParam.alvoMin}–${configParam.alvoMax} mg/dL`],
+  ], [280, CONTENT_W-280]);
+  paragrafo(`Tendência: ${tendencia.replace('▲','sobiu').replace('▼','caiu').replace('=','estável')}${sPrev? ` (média do mês anterior: ${sPrev.media.toFixed(0)} mg/dL)`:''}.`);
+
+  // ---------- GRÁFICOS ----------
+  secao('Evolução da glicemia no mês');
+  imagemGrafico('chart-mensal-linha', 'Glicemia ao longo do mês, com linha de tendência (regressão linear).');
+  imagemGrafico('chart-mensal-scatter', 'Relação entre a dose de insulina aplicada e a glicemia resultante.');
+
+  // ---------- DISTRIBUIÇÃO POR HORÁRIO ----------
+  secao('Distribuição por horário do dia');
+  tabela([
+    ['Período','Média (mg/dL)','Nº de leituras'],
+    ['Madrugada (0h–6h)', buckets.madrugada.length?mean(buckets.madrugada).toFixed(0):'—', String(buckets.madrugada.length)],
+    ['Manhã (6h–12h)', buckets.manha.length?mean(buckets.manha).toFixed(0):'—', String(buckets.manha.length)],
+    ['Tarde (12h–18h)', buckets.tarde.length?mean(buckets.tarde).toFixed(0):'—', String(buckets.tarde.length)],
+    ['Noite (18h–24h)', buckets.noite.length?mean(buckets.noite).toFixed(0):'—', String(buckets.noite.length)],
+  ], [CONTENT_W-260, 130, 130]);
+
+  // ---------- PIORES EPISÓDIOS ----------
+  secao('Piores episódios do mês');
+  if(topHipo.length){
+    paragrafo('Abaixo do alvo:', 10);
+    tabela([['Data/hora','Glicemia'], ...topHipo.map(r=>[fmtDate(r.dataGlicemia), `${r.glicemia} mg/dL`])], [CONTENT_W-140,140]);
+  }
+  if(topHiper.length){
+    paragrafo('Acima do alvo:', 10);
+    tabela([['Data/hora','Glicemia'], ...topHiper.map(r=>[fmtDate(r.dataGlicemia), `${r.glicemia} mg/dL`])], [CONTENT_W-140,140]);
+  }
+  if(!topHipo.length && !topHiper.length) paragrafo('Nenhum episódio relevante fora da faixa alvo neste mês.');
+
+  // ---------- TODOS OS LANÇAMENTOS DO MÊS ----------
+  secao('Todos os lançamentos do mês');
+  const linhasLanc = lista.map(r=>[
+    fmtDate(r.dataGlicemia), `${r.glicemia} mg/dL`, r.insulinaDose?`${r.insulinaDose} UI ${r.insulinaTipo||''}`:'—', (r.observacao||'').slice(0,40)
+  ]);
+  tabela([['Data/hora','Glicemia','Insulina','Observação'], ...linhasLanc], [110, 80, 130, CONTENT_W-320]);
+
+  // ---------- OBSERVAÇÕES DA VETERINÁRIA ----------
+  secao('Observações da veterinária');
+  if(!obs.length){
+    paragrafo('Nenhuma observação registrada para este mês.');
+  } else {
+    obs.forEach(o=>{
+      pdf.setFont(undefined,'bold'); pdf.setFontSize(9); pdf.setTextColor(...COR_MUTED);
+      garantirEspaco(14);
+      pdf.text(fmtDate(o.data), MARGIN, y);
+      y += 13;
+      paragrafo(o.texto);
+    });
+  }
+
+  rodape();
+  pdf.save(`pitoco-relatorio-${key}.pdf`);
 }
 
 /* ---------------- FICHA DO PITOCO ---------------- */
@@ -1518,6 +1762,153 @@ function renderPesoHistorico(){
 }
 
 /* ---------------- CONFIGURAÇÕES ---------------- */
+/* ---------------- PREENCHIMENTO POR VOZ ---------------- */
+function _falar(texto){
+  return new Promise(resolve=>{
+    if(!('speechSynthesis' in window)){ resolve(); return; }
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'pt-BR';
+    u.onend = resolve; u.onerror = resolve;
+    speechSynthesis.speak(u);
+  });
+}
+function _ouvir(){
+  return new Promise(resolve=>{
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ resolve(null); return; }
+    const rec = new SR();
+    rec.lang = 'pt-BR'; rec.maxAlternatives = 1; rec.interimResults = false;
+    let respondido = false;
+    rec.onresult = e=>{ respondido = true; resolve(e.results[0][0].transcript); };
+    rec.onerror = ()=>{ if(!respondido) resolve(null); };
+    rec.onend = ()=>{ if(!respondido) resolve(null); };
+    try{ rec.start(); }catch(e){ resolve(null); }
+  });
+}
+function _extrairNumero(texto){
+  if(!texto) return null;
+  const m = texto.toLowerCase().replace(',', '.').match(/[\d.]+/);
+  return m ? parseFloat(m[0]) : null;
+}
+async function iniciarPreenchimentoPorVoz(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR || !('speechSynthesis' in window)){
+    await customAlert('Seu navegador não tem suporte a entrada por voz. Funciona melhor no Google Chrome (Android/desktop).');
+    return;
+  }
+  const btn = document.getElementById('btn-voz');
+  const original = btn.textContent;
+  btn.disabled = true;
+
+  btn.textContent = '🎙️ Ouvindo: glicemia...';
+  await _falar('Qual o valor da glicemia?');
+  const glic = _extrairNumero(await _ouvir());
+  if(glic!==null) document.getElementById('in-glicemia').value = glic;
+
+  btn.textContent = '🎙️ Ouvindo: dose de insulina...';
+  await _falar('Qual a dose de insulina, em unidades?');
+  const dose = _extrairNumero(await _ouvir());
+  if(dose!==null){
+    const sel = document.getElementById('in-insulina');
+    const opcao = [...sel.options].find(o=> parseFloat(o.value)===dose);
+    if(opcao) sel.value = opcao.value;
+  }
+
+  btn.textContent = '🎙️ Ouvindo: tipo de insulina...';
+  await _falar('Qual o tipo ou marca da insulina?');
+  const tipoFalado = (await _ouvir()||'').toLowerCase();
+  if(tipoFalado){
+    const selTipo = document.getElementById('in-tipo-insulina');
+    const opcaoTipo = [...selTipo.options].find(o=> o.value && tipoFalado.includes(o.value.toLowerCase()));
+    if(opcaoTipo) selTipo.value = opcaoTipo.value;
+  }
+
+  btn.textContent = '🎙️ Ouvindo: observação...';
+  await _falar('Alguma observação? Pode dizer "nenhuma" se não houver.');
+  const obsFalada = await _ouvir();
+  if(obsFalada && !/^nenhuma?$/i.test(obsFalada.trim())){
+    document.getElementById('in-obs').value = obsFalada;
+  }
+
+  await _falar('Pronto. Revise os campos e toque em salvar lançamento.');
+  btn.textContent = original;
+  btn.disabled = false;
+}
+
+/* ---------------- EXAMES ---------------- */
+let exames = [];
+function _lerArquivoBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function salvarExame(){
+  const titulo = document.getElementById('ex-titulo').value.trim();
+  const data = document.getElementById('ex-data').value;
+  if(!titulo){ await customAlert('Informe o título do exame.'); return; }
+  if(!data){ await customAlert('Informe a data do exame.'); return; }
+
+  const dado = {
+    petId: PET_ID,
+    titulo,
+    data: new Date(data).toISOString(),
+    tipo: document.getElementById('ex-tipo').value,
+    veterinaria: document.getElementById('ex-vet').value || null,
+    resultado: document.getElementById('ex-resultado').value || null,
+    observacoes: document.getElementById('ex-obs').value || null,
+    criadoEm: new Date().toISOString(),
+    anexoBase64: null, anexoNome: null
+  };
+
+  const arquivoInput = document.getElementById('ex-arquivo');
+  const arquivo = arquivoInput.files[0];
+  if(arquivo){
+    if(arquivo.size > 700*1024){
+      await customAlert(`O arquivo tem ${(arquivo.size/1024).toFixed(0)} KB — acima do limite de ~700 KB do plano gratuito. O exame será salvo sem o anexo; os campos preenchidos continuam registrados normalmente.`);
+    } else {
+      dado.anexoBase64 = await _lerArquivoBase64(arquivo);
+      dado.anexoNome = arquivo.name;
+    }
+  }
+
+  await db.collection('exames').add(dado);
+  ['ex-titulo','ex-data','ex-vet','ex-resultado','ex-obs'].forEach(id=> document.getElementById(id).value='');
+  arquivoInput.value = '';
+  await customAlert('Exame salvo.', 'Sucesso', '✅');
+}
+function renderExamesTab(){
+  const el = document.getElementById('exames-lista');
+  if(!exames.length){ el.innerHTML = '<div class="empty">Nenhum exame registrado ainda.</div>'; return; }
+  const ordenados = [...exames].sort((a,b)=> new Date(b.data)-new Date(a.data));
+  el.innerHTML = ordenados.map(ex=>`
+    <div class="card" style="box-shadow:none;border:1px solid var(--line);margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
+        <div>
+          <strong>${ex.titulo}</strong>
+          <div class="badge-complete">${ex.tipo} · ${new Date(ex.data).toLocaleDateString('pt-BR')}${ex.veterinaria? ' · '+ex.veterinaria : ''}</div>
+        </div>
+        <button class="rowbtn" onclick="excluirExame('${ex.id}')">excluir</button>
+      </div>
+      ${ex.resultado ? `<p style="font-size:13.5px;margin:8px 0 0">${ex.resultado}</p>` : ''}
+      ${ex.observacoes ? `<p style="font-size:12.5px;color:var(--muted);margin:4px 0 0">${ex.observacoes}</p>` : ''}
+      ${ex.anexoBase64 ? `<button class="btn secondary" style="margin-top:10px;font-size:12px;padding:6px 10px" onclick="abrirAnexoExame('${ex.id}')">Abrir PDF anexado (${ex.anexoNome||'arquivo'})</button>` : ''}
+    </div>
+  `).join('');
+}
+function abrirAnexoExame(id){
+  const ex = exames.find(e=>e.id===id);
+  if(!ex || !ex.anexoBase64) return;
+  const win = window.open();
+  win.document.write(`<iframe src="${ex.anexoBase64}" style="width:100%;height:100vh;border:none"></iframe>`);
+}
+async function excluirExame(id){
+  if(!(await customConfirm('Excluir este exame? Isso também remove o PDF anexado, se houver.'))) return;
+  db.collection('exames').doc(id).delete();
+}
+
 function salvarConfig(){
   const novo = {
     hipo: parseFloat(document.getElementById('cfg-hipo').value),
