@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.17"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.20"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1161,9 +1161,21 @@ function daysInMonth(key){
 /* ---------------- GAUGE ---------------- */
 function renderGauge(container, valor){
   const min = 40, max = 400;
-  const pct = Math.max(0, Math.min(100, ((valor-min)/(max-min))*100));
+  const clampPct = v => Math.max(0, Math.min(100, ((v-min)/(max-min))*100));
+  const pct = clampPct(valor);
+  const pHipo = clampPct(configParam.hipo);
+  const pAlvoMin = clampPct(configParam.alvoMin);
+  const pAlvoMax = clampPct(configParam.alvoMax);
+  const pHiper = clampPct(configParam.hiper);
+  // gradiente calculado a partir dos parâmetros reais configurados (não mais fixo)
+  const gradiente = `linear-gradient(to right,
+    var(--danger) 0%, var(--danger) ${pHipo}%,
+    var(--accent-tint) ${pHipo}%, var(--accent-tint) ${pAlvoMin}%,
+    var(--target) ${pAlvoMin}%, var(--target) ${pAlvoMax}%,
+    var(--accent-tint) ${pAlvoMax}%, var(--accent-tint) ${pHiper}%,
+    var(--accent) ${pHiper}%, var(--accent) 100%)`;
   container.innerHTML = `
-    <div class="gauge"><div class="marker" data-val="${valor}" style="left:${pct}%"></div></div>
+    <div class="gauge" style="background:${gradiente}"><div class="marker" data-val="${valor}" style="left:${pct}%"></div></div>
     <div class="gauge-labels"><span>Hipo</span><span>Alvo (${configParam.alvoMin}-${configParam.alvoMax})</span><span>Hiper</span></div>
   `;
 }
@@ -1837,7 +1849,7 @@ function _falar(texto){
     let resolvido = false;
     // pequena folga depois do "terminei de falar" do navegador, porque em alguns
     // aparelhos o evento dispara um pouco antes do áudio realmente acabar de tocar
-    const finalizar = ()=>{ if(!resolvido){ resolvido = true; setTimeout(resolve, 600); } };
+    const finalizar = ()=>{ if(!resolvido){ resolvido = true; setTimeout(resolve, Math.min(1200, 600 + texto.length*3)); } };
     u.onend = finalizar;
     u.onerror = finalizar;
     // salvaguarda: se o navegador nunca disparar onend/onerror (acontece em alguns Android),
@@ -1940,6 +1952,7 @@ async function iniciarPreenchimentoPorVoz(){
     }
     if(glic!==null){
       document.getElementById('in-glicemia').value = glic;
+      await _falar(`Entendi ${glic} miligramas por decilitro.`);
     } else {
       await _falar(`Não consegui entender o valor da glicemia. A última coisa que entendi foi "${brutoGlic||'nada'}". Preencha esse campo manualmente e toque em salvar lançamento.`);
       return;
@@ -2017,6 +2030,7 @@ async function iniciarPreenchimentoPorVoz(){
     }
   } catch(err){
     if(err === _CANCELADO){
+      limparForm();
       await _falar('Lançamento cancelado. Nada foi salvo.');
     } else {
       throw err;
