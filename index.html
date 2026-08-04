@@ -200,6 +200,17 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
 .hist-curve .nadirv{font-family:'IBM Plex Mono',monospace;font-weight:600;}
 .hist-curve .trend-up{color:var(--accent);}
 .hist-curve .trend-down{color:var(--target);}
+
+/* ---- Modal customizado (substitui alert/confirm/prompt nativos) ---- */
+#custom-modal-overlay{position:fixed;inset:0;background:rgba(31,42,46,0.55);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+#custom-modal-overlay.open{display:flex;}
+.cm-box{background:var(--surface);border-radius:14px;max-width:380px;width:100%;padding:22px;box-shadow:0 20px 50px -12px rgba(0,0,0,0.35);}
+.cm-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.cm-icon{width:34px;height:34px;border-radius:50%;background:var(--danger-tint);color:var(--danger);display:flex;align-items:center;justify-content:center;font-size:18px;flex:none;}
+.cm-title{font-family:'Fraunces',serif;font-size:17px;font-weight:600;color:var(--ink);}
+.cm-message{font-size:13.5px;color:var(--ink);line-height:1.5;white-space:pre-line;margin-bottom:16px;}
+.cm-input{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:14px;}
+.cm-actions{display:flex;justify-content:flex-end;gap:8px;}
 </style>
 </head>
 <body>
@@ -507,13 +518,78 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
     </div>
   </section>
 </div>
+  <!-- ---------- MODAL CUSTOMIZADO ---------- -->
+  <div id="custom-modal-overlay">
+    <div class="cm-box">
+      <div class="cm-header">
+        <div class="cm-icon" id="cm-icon">⚠️</div>
+        <div class="cm-title" id="cm-title">Atenção</div>
+      </div>
+      <div class="cm-message" id="cm-message"></div>
+      <input type="text" class="cm-input" id="cm-input" style="display:none">
+      <div class="cm-actions" id="cm-actions"></div>
+    </div>
+  </div>
 
 <script>
 /* =========================================================
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.1"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.3"; // incrementar em +0.1 a cada atualização entregue
+
+/* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
+function _showCustomModal({message, title='Atenção', icon='⚠️', mode='alert', inputType='text'}){
+  return new Promise(resolve=>{
+    const overlay = document.getElementById('custom-modal-overlay');
+    document.getElementById('cm-title').textContent = title;
+    const iconEl = document.getElementById('cm-icon');
+    iconEl.textContent = icon;
+    iconEl.style.background = icon==='✅' ? 'var(--target-tint)' : 'var(--danger-tint)';
+    iconEl.style.color = icon==='✅' ? 'var(--target)' : 'var(--danger)';
+    document.getElementById('cm-message').textContent = message;
+    const input = document.getElementById('cm-input');
+    const actions = document.getElementById('cm-actions');
+    input.style.display = mode==='prompt' ? 'block' : 'none';
+    input.type = inputType;
+    input.value = '';
+    actions.innerHTML = '';
+
+    function fechar(valor){
+      overlay.classList.remove('open');
+      resolve(valor);
+    }
+    if(mode==='confirm'){
+      const bCancel = document.createElement('button');
+      bCancel.className = 'btn secondary'; bCancel.textContent = 'Cancelar';
+      bCancel.onclick = ()=>fechar(false);
+      const bOk = document.createElement('button');
+      bOk.className = 'btn'; bOk.textContent = 'Confirmar';
+      bOk.onclick = ()=>fechar(true);
+      actions.append(bCancel, bOk);
+    } else if(mode==='prompt'){
+      const bCancel = document.createElement('button');
+      bCancel.className = 'btn secondary'; bCancel.textContent = 'Cancelar';
+      bCancel.onclick = ()=>fechar(null);
+      const bOk = document.createElement('button');
+      bOk.className = 'btn'; bOk.textContent = 'OK';
+      bOk.onclick = ()=>fechar(input.value);
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter') fechar(input.value); });
+      actions.append(bCancel, bOk);
+      setTimeout(()=>input.focus(), 50);
+    } else {
+      const bOk = document.createElement('button');
+      bOk.className = 'btn'; bOk.textContent = 'OK';
+      bOk.onclick = ()=>fechar(true);
+      actions.append(bOk);
+    }
+    overlay.classList.add('open');
+  });
+}
+function customAlert(message, title='Atenção', icon='⚠️'){ return _showCustomModal({message, title, icon, mode:'alert'}); }
+function customConfirm(message, title='Atenção'){ return _showCustomModal({message, title, mode:'confirm'}); }
+function customPrompt(message, title='Atenção', inputType='text'){ return _showCustomModal({message, title, mode:'prompt', inputType}); }
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyBkSYWwtJ7YwXO3jGo6WEVC3gGdidX8wPk",
@@ -682,9 +758,9 @@ function salvarInsulinaConfig(){
     populateInsulinaSelects();
   });
 }
-function adicionarDose(){
+async function adicionarDose(){
   const v = parseFloat(document.getElementById('nova-dose').value);
-  if(isNaN(v)){ alert('Informe um valor de dose válido.'); return; }
+  if(isNaN(v)){ await customAlert('Informe um valor de dose válido.'); return; }
   configInsulina.doses = configInsulina.doses||[];
   if(!configInsulina.doses.includes(v)){
     configInsulina.doses.push(v);
@@ -713,32 +789,32 @@ function removerTipo(v){
 }
 
 /* ---------------- ZONA DE PERIGO ---------------- */
-function alterarSenha(){
+async function alterarSenha(){
   const atual = document.getElementById('senha-atual').value;
   const nova = document.getElementById('senha-nova').value;
   const confirma = document.getElementById('senha-nova-confirma').value;
-  if(atual !== senhaAcesso){ alert('Senha atual incorreta. Nada foi alterado.'); return; }
-  if(!nova || nova.length < 4){ alert('A nova senha precisa ter pelo menos 4 caracteres.'); return; }
-  if(nova !== confirma){ alert('A confirmação não bate com a nova senha.'); return; }
-  db.collection('config').doc('acesso').set({senha: nova}).then(()=>{
+  if(atual !== senhaAcesso){ await customAlert('Senha atual incorreta. Nada foi alterado.'); return; }
+  if(!nova || nova.length < 4){ await customAlert('A nova senha precisa ter pelo menos 4 caracteres.'); return; }
+  if(nova !== confirma){ await customAlert('A confirmação não bate com a nova senha.'); return; }
+  db.collection('config').doc('acesso').set({senha: nova}).then(async ()=>{
     senhaAcesso = nova;
     document.getElementById('senha-atual').value = '';
     document.getElementById('senha-nova').value = '';
     document.getElementById('senha-nova-confirma').value = '';
-    alert('Senha alterada com sucesso. Use a nova senha no próximo login.');
-  }).catch(err=> alert('Erro ao salvar a nova senha: '+err.message));
+    await customAlert('Senha alterada com sucesso. Use a nova senha no próximo login.', 'Sucesso', '✅');
+  }).catch(async err=> await customAlert('Erro ao salvar a nova senha: '+err.message));
 }
-function apagarTudoFluxo(){
-  const senha = prompt('Para apagar TODOS os registros e curvas, digite a senha de acesso:');
+async function apagarTudoFluxo(){
+  const senha = await customPrompt('Para apagar TODOS os registros e curvas, digite a senha de acesso:', 'Confirmar exclusão', 'password');
   if(senha === null) return;
   if(senha !== senhaAcesso){
-    alert('Senha incorreta. Nada foi apagado.');
+    await customAlert('Senha incorreta. Nada foi apagado.');
     return;
   }
-  const confirmacao = prompt('Ação irreversível. Digite APAGAR (em maiúsculas) para confirmar:');
+  const confirmacao = await customPrompt('Ação irreversível. Digite APAGAR (em maiúsculas) para confirmar:', 'Confirmar exclusão');
   if(confirmacao === null) return;
   if(confirmacao !== 'APAGAR'){
-    alert('Confirmação não corresponde a "APAGAR". Nada foi apagado.');
+    await customAlert('Confirmação não corresponde a "APAGAR". Nada foi apagado.');
     return;
   }
   apagarTudo();
@@ -758,9 +834,9 @@ async function apagarTudo(){
       refs.slice(i, i+400).forEach(ref=> lote.delete(ref));
       await lote.commit();
     }
-    alert(`Concluído: ${regSnap.size} lançamento(s) e ${curvSnap.size} curva(s) apagados.`);
+    await customAlert(`Concluído: ${regSnap.size} lançamento(s) e ${curvSnap.size} curva(s) apagados.`, 'Concluído', '✅');
   }catch(err){
-    alert('Erro ao apagar: '+err.message);
+    await customAlert('Erro ao apagar: '+err.message);
   }
 }
 
@@ -867,7 +943,7 @@ function renderCurvaTab(){
 }
 function iniciarCurva(){
   const glic = parseFloat(document.getElementById('curva-glic-inicial').value);
-  if(isNaN(glic)){ alert('Informe a glicemia inicial.'); return; }
+  if(isNaN(glic)){ customAlert('Informe a glicemia inicial.'); return; }
   const inicio = new Date(document.getElementById('curva-inicio').value || new Date()).toISOString();
   const dado = {
     petId: PET_ID,
@@ -880,23 +956,23 @@ function iniciarCurva(){
   };
   db.collection('curvas').add(dado);
 }
-function adicionarPontoCurva(id){
+async function adicionarPontoCurva(id){
   const glic = parseFloat(document.getElementById('curva-novo-ponto').value);
-  if(isNaN(glic)){ alert('Informe a glicemia.'); return; }
+  if(isNaN(glic)){ await customAlert('Informe a glicemia.'); return; }
   const horario = new Date(document.getElementById('curva-novo-horario').value || new Date()).toISOString();
   const ativa = curvas.find(c=>c.id===id);
 
   const duplicado = ativa.pontos.find(p => p.horario === horario);
   if(duplicado){
-    alert(`Esta curva já tem um ponto registrado exatamente em ${new Date(duplicado.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} (glicemia ${duplicado.glicemia} mg/dL).\n\nAjuste o minuto deste novo ponto antes de adicionar, para não confundir com o outro.`);
+    await customAlert(`Esta curva já tem um ponto registrado exatamente em ${new Date(duplicado.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} (glicemia ${duplicado.glicemia} mg/dL).\n\nAjuste o minuto deste novo ponto antes de adicionar, para não confundir com o outro.`);
     return;
   }
 
   const novosPontos = [...ativa.pontos, { glicemia: glic, horario }];
   db.collection('curvas').doc(id).update({ pontos: novosPontos });
 }
-function finalizarCurva(id){
-  if(!confirm('Finalizar esta curva? Você ainda poderá consultar o resultado no histórico.')) return;
+async function finalizarCurva(id){
+  if(!(await customConfirm('Finalizar esta curva? Você ainda poderá consultar o resultado no histórico.'))) return;
   db.collection('curvas').doc(id).update({ finalizada: true, fimEm: new Date().toISOString() });
 }
 function renderCurvaHistorico(){
@@ -1018,15 +1094,15 @@ function renderUltimaLeitura(){
 }
 
 /* ---------------- SALVAR / EDITAR / EXCLUIR REGISTRO ---------------- */
-function salvarRegistro(){
+async function salvarRegistro(){
   const glicemia = parseFloat(document.getElementById('in-glicemia').value);
-  if(isNaN(glicemia)){ alert('Informe a glicemia.'); return; }
+  if(isNaN(glicemia)){ await customAlert('Informe a glicemia.'); return; }
   const dataGlicemia = document.getElementById('in-data-glicemia').value || toLocalInput(new Date());
   const dataGlicemiaISO = new Date(dataGlicemia).toISOString();
 
   const duplicado = registros.find(r => r.dataGlicemia === dataGlicemiaISO && r.id !== editingId);
   if(duplicado){
-    alert(`Já existe um lançamento registrado exatamente em ${fmtDate(duplicado.dataGlicemia)} (glicemia ${duplicado.glicemia} mg/dL).\n\nAjuste o minuto da data/hora deste lançamento antes de salvar, para não confundir com o outro.`);
+    await customAlert(`Já existe um lançamento registrado exatamente em ${fmtDate(duplicado.dataGlicemia)} (glicemia ${duplicado.glicemia} mg/dL).\n\nAjuste o minuto da data/hora deste lançamento antes de salvar, para não confundir com o outro.`);
     return;
   }
 
@@ -1048,7 +1124,7 @@ function salvarRegistro(){
 
   salvar.then(()=>{
     limparForm();
-  }).catch(err=>alert('Erro ao salvar: '+err.message));
+  }).catch(async err=> await customAlert('Erro ao salvar: '+err.message));
 }
 function limparForm(){
   document.getElementById('in-glicemia').value='';
@@ -1083,8 +1159,8 @@ function editarRegistro(id){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function cancelarEdicao(){ limparForm(); }
-function excluirRegistro(id){
-  if(!confirm('Excluir este lançamento?')) return;
+async function excluirRegistro(id){
+  if(!(await customConfirm('Excluir este lançamento?'))) return;
   db.collection('registros').doc(id).delete();
 }
 
@@ -1196,6 +1272,17 @@ function agregarPorDia(lista){
     n: porDia[chave].length
   }));
 }
+function calcularTendenciaLinear(valores){
+  const n = valores.length;
+  if(n < 2) return valores.slice();
+  const xs = valores.map((_,i)=>i);
+  const mediaX = mean(xs), mediaY = mean(valores);
+  let num = 0, den = 0;
+  for(let i=0;i<n;i++){ num += (xs[i]-mediaX)*(valores[i]-mediaY); den += (xs[i]-mediaX)**2; }
+  const slope = den===0 ? 0 : num/den;
+  const intercept = mediaY - slope*mediaX;
+  return xs.map(x=> slope*x + intercept);
+}
 function renderChartMensalLinha(modo){
   const lista = window._listaMensalAtual;
   const ctx1 = document.getElementById('chart-mensal-linha').getContext('2d');
@@ -1203,27 +1290,31 @@ function renderChartMensalLinha(modo){
 
   if(modo === 'diario'){
     const dias = agregarPorDia(lista);
+    const tendencia = calcularTendenciaLinear(dias.map(d=>d.media));
     mensalChart1 = new Chart(ctx1, {
       type:'line',
       data:{ labels: dias.map(d=>d.label), datasets:[
         { label:'Média do dia', data: dias.map(d=>d.media), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:false, tension:0.2, pointRadius:3, pointHitRadius:12 },
         { label:'Máximo do dia', data: dias.map(d=>d.max), borderColor:'rgba(232,163,61,0.5)', borderDash:[4,4], pointRadius:0, fill:'+1' },
-        { label:'Mínimo do dia', data: dias.map(d=>d.min), borderColor:'rgba(76,154,106,0.5)', borderDash:[4,4], pointRadius:0, fill:false }
+        { label:'Mínimo do dia', data: dias.map(d=>d.min), borderColor:'rgba(76,154,106,0.5)', borderDash:[4,4], pointRadius:0, fill:false },
+        { label:'Tendência', data: tendencia, borderColor:'#C1533D', borderWidth:2, borderDash:[8,4], pointRadius:0, fill:false, tension:0 }
       ]},
       options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
-        plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}}}, title:{display:true,text:'Média diária (faixa mín–máx sombreada)'},
+        plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}}}, title:{display:true,text:'Média diária (faixa mín–máx sombreada) + tendência'},
           tooltip:{ callbacks:{ afterTitle:(items)=>{ const d = dias[items[0].dataIndex]; return `${d.n} leitura(s) neste dia`; } } } },
         scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
     });
   } else {
+    const tendencia = calcularTendenciaLinear(lista.map(r=>r.glicemia));
     mensalChart1 = new Chart(ctx1, {
       type:'line',
-      data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[{
-        label:'Glicemia', data: lista.map(r=>r.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.2, pointRadius:2, pointHitRadius:12
-      }]},
+      data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[
+        { label:'Glicemia', data: lista.map(r=>r.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.2, pointRadius:2, pointHitRadius:12 },
+        { label:'Tendência', data: tendencia, borderColor:'#C1533D', borderWidth:2, borderDash:[8,4], pointRadius:0, fill:false, tension:0 }
+      ]},
       options:{ responsive:true, maintainAspectRatio:false,
         interaction:{ mode:'index', intersect:false },
-        plugins:{legend:{display:false}, title:{display:true,text:'Glicemia ao longo do mês (cada leitura)'},
+        plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}}}, title:{display:true,text:'Glicemia ao longo do mês (cada leitura) + tendência'},
         tooltip:{ callbacks:{ title: (items)=> new Date(lista[items[0].dataIndex].dataGlicemia).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) } } },
         scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
     });
@@ -1361,7 +1452,7 @@ function renderMensal(){
 function salvarObsVet(key){
   const val = document.getElementById('obs-vet').value;
   db.collection('relatoriosMensais').doc(key).set({observacoesVet: val, updatedAt: new Date().toISOString()}, {merge:true})
-    .then(()=>alert('Observação salva.'));
+    .then(()=>customAlert('Observação salva.', 'Sucesso', '✅'));
 }
 
 /* ---------------- EXPORTAR PDF ---------------- */
@@ -1403,7 +1494,7 @@ function salvarFicha(){
     if(pesoMudou){
       db.collection('pesoHistorico').add({peso: novoPeso, data: new Date().toISOString()}).then(renderPesoHistorico);
     }
-    alert('Ficha salva.');
+    customAlert('Ficha salva.', 'Sucesso', '✅');
   });
 }
 function renderIdade(){
@@ -1435,24 +1526,24 @@ function salvarConfig(){
     hiper: parseFloat(document.getElementById('cfg-hiper').value)
   };
   if(Object.values(novo).some(v=>isNaN(v))){
-    alert('Preencha todos os parâmetros com números válidos.');
+    customAlert('Preencha todos os parâmetros com números válidos.');
     return;
   }
   if(novo.alvoMin >= novo.alvoMax){
-    alert('A faixa alvo está inválida: o valor mínimo precisa ser menor que o máximo.');
+    customAlert('A faixa alvo está inválida: o valor mínimo precisa ser menor que o máximo.');
     return;
   }
   if(novo.hipo >= novo.alvoMin){
-    alert('O limite de hipoglicemia precisa ser menor que o mínimo da faixa alvo.');
+    customAlert('O limite de hipoglicemia precisa ser menor que o mínimo da faixa alvo.');
     return;
   }
   if(novo.hiper < novo.alvoMax){
-    alert('O limite de hiperglicemia precisa ser maior ou igual ao máximo da faixa alvo.');
+    customAlert('O limite de hiperglicemia precisa ser maior ou igual ao máximo da faixa alvo.');
     return;
   }
   configParam = novo;
   db.collection('config').doc('parametros').set(configParam).then(()=>{
-    alert('Parâmetros salvos.');
+    customAlert('Parâmetros salvos.', 'Sucesso', '✅');
     renderUltimaLeitura(); renderMonths();
   });
 }
