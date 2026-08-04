@@ -269,7 +269,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
 
     <div class="card">
       <h2>Novo lançamento</h2>
-      <div class="field">
+      <div class="field" id="bloco-voz">
         <button class="btn secondary" type="button" onclick="iniciarPreenchimentoPorVoz()" id="btn-voz">🎙️ Preencher por voz</button>
         <p style="font-size:11.5px;color:var(--muted);margin-top:6px">A entrada por voz é resumida e limitada — funciona melhor em ambiente silencioso, com respostas curtas (ex: "duzentos", "quatro", "NPH"). Ao final das perguntas, o lançamento é salvo automaticamente.</p>
       </div>
@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.9"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.11"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -713,6 +713,15 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 document.getElementById('gate-version').textContent = APP_VERSION;
+
+/* entrada por voz: só habilitada em celular — é onde digitar é mais chato */
+function _isMobile(){
+  return /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent);
+}
+if(!_isMobile()){
+  const bloco = document.getElementById('bloco-voz');
+  if(bloco) bloco.innerHTML = '<p style="font-size:11.5px;color:var(--muted)">🎙️ Preenchimento por voz disponível apenas no celular.</p>';
+}
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const det = document.querySelector('details.more-details');
@@ -1818,26 +1827,46 @@ function renderPesoHistorico(){
 
 /* ---------------- CONFIGURAÇÕES ---------------- */
 /* ---------------- PREENCHIMENTO POR VOZ ---------------- */
+let _reconhecimentoAtivo = null;
 function _falar(texto){
   return new Promise(resolve=>{
     if(!('speechSynthesis' in window)){ resolve(); return; }
+    speechSynthesis.cancel(); // limpa qualquer fala pendente/travada antes de começar uma nova
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = 'pt-BR';
-    u.onend = resolve; u.onerror = resolve;
+    let resolvido = false;
+    const finalizar = ()=>{ if(!resolvido){ resolvido = true; resolve(); } };
+    u.onend = finalizar;
+    u.onerror = finalizar;
+    // salvaguarda: se o navegador nunca disparar onend/onerror (acontece em alguns Android),
+    // não deixa o fluxo travado esperando pra sempre
+    setTimeout(finalizar, Math.max(4000, texto.length*90));
     speechSynthesis.speak(u);
   });
 }
 function _ouvir(){
-  return new Promise(resolve=>{
+  return new Promise(async resolve=>{
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR){ resolve(null); return; }
+    // se ainda houver um reconhecimento anterior "pendurado", encerra antes de abrir outro
+    if(_reconhecimentoAtivo){
+      try{ _reconhecimentoAtivo.abort(); }catch(e){}
+      _reconhecimentoAtivo = null;
+    }
+    // pausa curta pra evitar que o microfone abra em cima da fala anterior ainda "assentando"
+    await new Promise(r=>setTimeout(r, 400));
     const rec = new SR();
+    _reconhecimentoAtivo = rec;
     rec.lang = 'pt-BR'; rec.maxAlternatives = 1; rec.interimResults = false;
     let respondido = false;
-    rec.onresult = e=>{ respondido = true; resolve(e.results[0][0].transcript); };
-    rec.onerror = ()=>{ if(!respondido) resolve(null); };
-    rec.onend = ()=>{ if(!respondido) resolve(null); };
-    try{ rec.start(); }catch(e){ resolve(null); }
+    const finalizar = (valor)=>{
+      if(_reconhecimentoAtivo===rec) _reconhecimentoAtivo = null;
+      if(!respondido){ respondido = true; resolve(valor); }
+    };
+    rec.onresult = e=>{ finalizar(e.results[0][0].transcript); };
+    rec.onerror = ()=>{ finalizar(null); };
+    rec.onend = ()=>{ finalizar(null); };
+    try{ rec.start(); }catch(e){ finalizar(null); }
   });
 }
 const _NUMEROS_POR_EXTENSO = {
