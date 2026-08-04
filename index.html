@@ -144,6 +144,13 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
 .notice{background:var(--primary-tint);color:var(--primary-dark);font-size:12.5px;padding:10px 12px;border-radius:9px;margin-bottom:14px;}
 .month-select-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;}
 
+/* campo expansível "mais detalhes" */
+details.more-details{margin-bottom:12px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;}
+details.more-details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--primary-dark);list-style:none;display:flex;align-items:center;gap:6px;}
+details.more-details summary::-webkit-details-marker{display:none;}
+details.more-details summary::before{content:"▶";font-size:10px;color:var(--muted);transition:transform .15s;}
+details.more-details[open] summary::before{transform:rotate(90deg);}
+
 /* ---------- RESPONSIVO (celular vs. desktop) ---------- */
 @media (min-width: 820px){
   body{font-size:15px;}
@@ -263,16 +270,19 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
           <select id="in-tipo-insulina"><option value="">Selecione...</option></select>
         </div>
       </div>
-      <div class="grid">
-        <div class="field">
-          <label>Hora da aplicação da insulina</label>
-          <input type="datetime-local" id="in-data-insulina">
+      <details class="more-details">
+        <summary>Mais detalhes (horários específicos)</summary>
+        <div class="grid" style="margin-top:10px">
+          <div class="field">
+            <label>Hora da aplicação da insulina</label>
+            <input type="datetime-local" id="in-data-insulina">
+          </div>
+          <div class="field">
+            <label>Última refeição (hora)</label>
+            <input type="datetime-local" id="in-refeicao">
+          </div>
         </div>
-        <div class="field">
-          <label>Última refeição (hora)</label>
-          <input type="datetime-local" id="in-refeicao">
-        </div>
-      </div>
+      </details>
       <div class="field">
         <label>Observação (contexto: exercício, estresse, etc.)</label>
         <textarea id="in-obs" placeholder="Opcional"></textarea>
@@ -558,6 +568,21 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   window.addEventListener('DOMContentLoaded', initApp);
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const det = document.querySelector('details.more-details');
+  if(det){
+    det.addEventListener('toggle', ()=>{
+      if(det.open){
+        const base = document.getElementById('in-data-glicemia').value;
+        const campoInsulina = document.getElementById('in-data-insulina');
+        const campoRefeicao = document.getElementById('in-refeicao');
+        if(base && !campoInsulina.value) campoInsulina.value = base;
+        if(base && !campoRefeicao.value) campoRefeicao.value = base;
+      }
+    });
+  }
+});
 
 /* ---------------- TABS ---------------- */
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
@@ -1024,6 +1049,8 @@ function limparForm(){
   document.getElementById('in-obs').value='';
   document.getElementById('in-curva').checked=false;
   document.getElementById('in-data-glicemia').value = toLocalInput(new Date());
+  const det = document.querySelector('details.more-details');
+  if(det) det.open = false;
   editingId = null;
   document.getElementById('cancel-edit').style.display='none';
 }
@@ -1039,6 +1066,8 @@ function editarRegistro(id){
   document.getElementById('in-refeicao').value = r.ultimaRefeicao? toLocalInput(new Date(r.ultimaRefeicao)) : '';
   document.getElementById('in-obs').value = r.observacao||'';
   document.getElementById('in-curva').checked = !!r.curvaDia;
+  const det = document.querySelector('details.more-details');
+  if(det) det.open = !!(r.dataInsulina || r.ultimaRefeicao);
   document.getElementById('cancel-edit').style.display='inline-block';
   document.querySelector('[data-tab="lancar"]').click();
   window.scrollTo({top:0,behavior:'smooth'});
