@@ -616,7 +616,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev002.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev002.6"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1307,6 +1307,18 @@ async function salvarRegistro(){
     if(editingId) await db.collection('registros').doc(editingId).update(dado);
     else await db.collection('registros').add({...dado, createdAt: new Date().toISOString()});
     limparForm();
+
+    // atualiza a "Última leitura" imediatamente com o valor recém-salvo, sem esperar
+    // o eco assíncrono do Firestore (onSnapshot) — evita a barra ficar com valor desatualizado
+    const gaugeWrap = document.getElementById('last-gauge-wrap');
+    const infoEl = document.getElementById('last-info');
+    if(gaugeWrap && infoEl){
+      const maisRecenteAtual = registros[0] ? new Date(registros[0].dataGlicemia).getTime() : 0;
+      if(new Date(dataGlicemiaISO).getTime() >= maisRecenteAtual){
+        renderGauge(gaugeWrap, glicemia);
+        infoEl.textContent = `${glicemia} mg/dL em ${fmtDate(dataGlicemiaISO)}`;
+      }
+    }
 
     if(dado.curvaDia){
       try{
