@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.6"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.7"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 function _showCustomModal({message, title='Atenção', icon='⚠️', mode='alert', inputType='text', grande=false}){
@@ -1180,14 +1180,31 @@ async function salvarRegistro(){
     limparForm();
 
     if(dado.curvaDia){
-      const ativa = curvaAtiva();
-      if(ativa){
-        const jaExiste = ativa.pontos.find(p=>p.horario===dataGlicemiaISO);
-        if(!jaExiste){
-          await db.collection('curvas').doc(ativa.id).update({ pontos: [...ativa.pontos, { glicemia, horario: dataGlicemiaISO, observacao: dado.observacao }] });
+      try{
+        const ativa = curvaAtiva();
+        if(ativa){
+          const jaExiste = ativa.pontos.find(p=>p.horario===dataGlicemiaISO);
+          if(!jaExiste){
+            await db.collection('curvas').doc(ativa.id).update({ pontos: [...ativa.pontos, { glicemia, horario: dataGlicemiaISO, observacao: dado.observacao }] });
+          }
+        } else {
+          const querIniciar = await customConfirm('Não há nenhuma curva glicêmica em andamento. Iniciar uma nova curva agora, usando esta glicemia e esta insulina como primeiro ponto?', 'Iniciar curva?');
+          if(querIniciar){
+            await db.collection('curvas').add({
+              petId: PET_ID,
+              inicio: dataGlicemiaISO,
+              insulinaDose: dado.insulinaDose,
+              insulinaTipo: dado.insulinaTipo,
+              pontos: [{ glicemia, horario: dataGlicemiaISO, observacao: dado.observacao }],
+              finalizada: false,
+              criadoEm: new Date().toISOString()
+            });
+            await customAlert('Curva iniciada com este lançamento como primeiro ponto. Continue marcando a caixinha nos próximos lançamentos do dia, ou adicione pontos direto na aba "Curva glicêmica".', 'Curva iniciada', '✅');
+          }
         }
-      } else {
-        await customAlert('Este lançamento foi salvo, mas não há nenhuma curva glicêmica em andamento no momento — ele não foi adicionado a nenhuma curva. Inicie uma curva na aba "Curva glicêmica" se quiser agrupar os próximos lançamentos.');
+      }catch(errCurva){
+        // o lançamento principal já foi salvo com sucesso; um erro aqui não deve reportar falha geral
+        await customAlert('O lançamento foi salvo, mas houve um problema ao conectá-lo à curva: '+errCurva.message);
       }
     }
 
@@ -1841,8 +1858,21 @@ async function iniciarPreenchimentoPorVoz(){
 
   btn.textContent = '🎙️ Ouvindo: glicemia...';
   await _falar('Qual o valor da glicemia?');
-  const glic = _extrairNumero(await _ouvir());
-  if(glic!==null) document.getElementById('in-glicemia').value = glic;
+  let glic = _extrairNumero(await _ouvir());
+  let tentativasGlic = 0;
+  while(glic===null && tentativasGlic < 2){
+    tentativasGlic++;
+    await _falar('Não entendi o valor da glicemia. Pode repetir, só o número?');
+    glic = _extrairNumero(await _ouvir());
+  }
+  if(glic!==null){
+    document.getElementById('in-glicemia').value = glic;
+  } else {
+    await _falar('Não consegui entender o valor da glicemia depois de algumas tentativas. Preencha esse campo manualmente e toque em salvar lançamento.');
+    btn.textContent = original;
+    btn.disabled = false;
+    return;
+  }
 
   btn.textContent = '🎙️ Ouvindo: dose de insulina...';
   await _falar('Qual a dose de insulina, em unidades?');
