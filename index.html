@@ -271,7 +271,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       <h2>Novo lançamento</h2>
       <div class="field">
         <button class="btn secondary" type="button" onclick="iniciarPreenchimentoPorVoz()" id="btn-voz">🎙️ Preencher por voz</button>
-        <p style="font-size:11.5px;color:var(--muted);margin-top:6px">A entrada por voz é resumida e limitada — funciona melhor em ambiente silencioso, com respostas curtas (ex: "duzentos", "quatro", "NPH"). Revise os campos preenchidos antes de salvar.</p>
+        <p style="font-size:11.5px;color:var(--muted);margin-top:6px">A entrada por voz é resumida e limitada — funciona melhor em ambiente silencioso, com respostas curtas (ex: "duzentos", "quatro", "NPH"). Ao final das perguntas, o lançamento é salvo automaticamente.</p>
       </div>
       <div class="grid">
         <div class="field">
@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.4"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.5"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 function _showCustomModal({message, title='Atenção', icon='⚠️', mode='alert', inputType='text', grande=false}){
@@ -1151,14 +1151,14 @@ function renderUltimaLeitura(){
 /* ---------------- SALVAR / EDITAR / EXCLUIR REGISTRO ---------------- */
 async function salvarRegistro(){
   const glicemia = parseFloat(document.getElementById('in-glicemia').value);
-  if(isNaN(glicemia)){ await customAlert('Informe a glicemia.'); return; }
+  if(isNaN(glicemia)){ await customAlert('Informe a glicemia.'); return false; }
   const dataGlicemia = document.getElementById('in-data-glicemia').value || toLocalInput(new Date());
   const dataGlicemiaISO = new Date(dataGlicemia).toISOString();
 
   const duplicado = registros.find(r => r.dataGlicemia === dataGlicemiaISO && r.id !== editingId);
   if(duplicado){
     await customAlert(`Já existe um lançamento registrado exatamente em ${fmtDate(duplicado.dataGlicemia)} (glicemia ${duplicado.glicemia} mg/dL).\n\nAjuste o minuto da data/hora deste lançamento antes de salvar, para não confundir com o outro.`);
-    return;
+    return false;
   }
 
   const dado = {
@@ -1173,18 +1173,21 @@ async function salvarRegistro(){
     curvaDia: document.getElementById('in-curva').checked,
     updatedAt: new Date().toISOString()
   };
-  const salvar = editingId
-    ? db.collection('registros').doc(editingId).update(dado)
-    : db.collection('registros').add({...dado, createdAt: new Date().toISOString()});
 
-  salvar.then(async ()=>{
+  try{
+    if(editingId) await db.collection('registros').doc(editingId).update(dado);
+    else await db.collection('registros').add({...dado, createdAt: new Date().toISOString()});
     limparForm();
     if(glicemia < configParam.hipo){
       await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — abaixo do limite de hipoglicemia (${configParam.hipo} mg/dL).\n\nMonitore o Pitoco de perto. Se houver sinais de fraqueza, tremores ou desorientação, contate a veterinária imediatamente.`, 'HIPOGLICEMIA DETECTADA');
     } else if(glicemia > configParam.hiper){
       await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — acima do limite de hiperglicemia (${configParam.hiper} mg/dL).\n\nMonitore o Pitoco e considere contatar a veterinária conforme orientação do tratamento.`, 'HIPERGLICEMIA DETECTADA');
     }
-  }).catch(async err=> await customAlert('Erro ao salvar: '+err.message));
+    return true;
+  }catch(err){
+    await customAlert('Erro ao salvar: '+err.message);
+    return false;
+  }
 }
 function limparForm(){
   document.getElementById('in-glicemia').value='';
@@ -1301,11 +1304,13 @@ function renderSemanal(){
   if(semanalChart) semanalChart.destroy();
   semanalChart = new Chart(ctx, {
     type:'line',
-    data:{ labels: lista.map(r=>fmtDate(r.dataGlicemia)), datasets:[{
+    data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[{
       label:'Glicemia (mg/dL)', data: lista.map(r=>r.glicemia),
       borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.25, pointRadius:3, pointHitRadius:12
     }]},
-    options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false }, plugins:{legend:{display:false}},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{legend:{display:false},
+        tooltip:{ callbacks:{ title:(items)=> fmtDate(lista[items[0].dataIndex].dataGlicemia) } } },
       scales:{ y:{ suggestedMin: configParam.hipo-30, suggestedMax: configParam.hiper+30 }, x:{ ticks:{ autoSkip:true, maxRotation:45 } } } }
   });
 }
@@ -1549,7 +1554,8 @@ async function exportarPDF(){
   const d = window._mensalReportData;
   if(!d){ await customAlert('Abra o relatório mensal antes de exportar.'); return; }
   const { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia } = d;
-  const obs = (window._obsVetCache && window._obsVetCache[key]) || [];
+  const docObs = await db.collection('relatoriosMensais').doc(key).get();
+  const obs = (docObs.exists && docObs.data().observacoes) || [];
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p','pt','a4');
@@ -1785,10 +1791,30 @@ function _ouvir(){
     try{ rec.start(); }catch(e){ resolve(null); }
   });
 }
+const _NUMEROS_POR_EXTENSO = {
+  'zero':0,'um':1,'uma':1,'dois':2,'duas':2,'três':3,'tres':3,'quatro':4,'cinco':5,'seis':6,
+  'sete':7,'oito':8,'nove':9,'dez':10,'onze':11,'doze':12,'treze':13,'catorze':14,'quatorze':14,
+  'quinze':15,'dezesseis':16,'dezessete':17,'dezoito':18,'dezenove':19,'vinte':20,
+  'trinta':30,'quarenta':40,'cinquenta':50,'sessenta':60,'setenta':70,'oitenta':80,'noventa':90,
+  'cem':100,'cento':100,'duzentos':200,'duzentas':200,'trezentos':300,'trezentas':300,
+  'quatrocentos':400,'quinhentos':500
+};
 function _extrairNumero(texto){
   if(!texto) return null;
-  const m = texto.toLowerCase().replace(',', '.').match(/[\d.]+/);
-  return m ? parseFloat(m[0]) : null;
+  const limpo = texto.toLowerCase().trim();
+  // 1) tenta dígitos diretos (a maioria dos casos, já que o reconhecimento de voz costuma converter)
+  const m = limpo.replace(',', '.').match(/[\d.]+/);
+  if(m) return parseFloat(m[0]);
+  // 2) fallback: números por extenso em português (comum em respostas curtas tipo "cinco")
+  const meio = /\be meio\b|\be meia\b/.test(limpo) ? 0.5 : 0;
+  let soma = null;
+  limpo.replace(/[^a-zàâãéêíóôõúü ]/g,'').split(/\s+/).forEach(palavra=>{
+    if(_NUMEROS_POR_EXTENSO.hasOwnProperty(palavra)){
+      soma = (soma||0) + _NUMEROS_POR_EXTENSO[palavra];
+    }
+  });
+  if(soma!==null) return soma + meio;
+  return null;
 }
 async function iniciarPreenchimentoPorVoz(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1810,7 +1836,14 @@ async function iniciarPreenchimentoPorVoz(){
   const dose = _extrairNumero(await _ouvir());
   if(dose!==null){
     const sel = document.getElementById('in-insulina');
-    const opcao = [...sel.options].find(o=> parseFloat(o.value)===dose);
+    let opcao = [...sel.options].find(o=> o.value && parseFloat(o.value)===dose);
+    if(!opcao){
+      // sem match exato: escolhe a opção cadastrada mais próxima do valor falado
+      const comValor = [...sel.options].filter(o=>o.value);
+      if(comValor.length){
+        opcao = comValor.reduce((mais,o)=> Math.abs(parseFloat(o.value)-dose) < Math.abs(parseFloat(mais.value)-dose) ? o : mais);
+      }
+    }
     if(opcao) sel.value = opcao.value;
   }
 
@@ -1830,7 +1863,20 @@ async function iniciarPreenchimentoPorVoz(){
     document.getElementById('in-obs').value = obsFalada;
   }
 
-  await _falar('Pronto. Revise os campos e toque em salvar lançamento.');
+  btn.textContent = '🎙️ Ouvindo: curva do dia?';
+  await _falar('Isso faz parte de uma curva glicêmica do dia? Diga sim ou não.');
+  const curvaResp = (await _ouvir()||'').toLowerCase();
+  document.getElementById('in-curva').checked = /\bsim\b/.test(curvaResp);
+
+  btn.textContent = '🎙️ Salvando...';
+  await _falar('Salvando o lançamento.');
+  const ok = await salvarRegistro();
+  if(ok){
+    await _falar('Lançamento salvo com sucesso.');
+  } else {
+    await _falar('Não consegui salvar o lançamento. Revise os campos e tente novamente.');
+  }
+
   btn.textContent = original;
   btn.disabled = false;
 }
