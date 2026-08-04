@@ -616,7 +616,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev002.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev002.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1267,6 +1267,19 @@ async function salvarRegistro(){
   if(isNaN(glicemia)){ await customAlert('Informe a glicemia.'); return false; }
   const dataGlicemia = document.getElementById('in-data-glicemia').value || toLocalInput(new Date());
   const dataGlicemiaISO = new Date(dataGlicemia).toISOString();
+
+  // trava de data: futuro é bloqueado; passado muito distante só avisa, não bloqueia
+  const agora = Date.now();
+  const tGlicemia = new Date(dataGlicemiaISO).getTime();
+  if(tGlicemia > agora + 5*60*1000){ // tolerância de 5min pra pequenas diferenças de relógio
+    await customAlert('A data/hora informada está no futuro. Não é possível lançar uma glicemia que ainda não aconteceu — confira o campo de data/hora.');
+    return false;
+  }
+  const diasAtras = (agora - tGlicemia)/(24*60*60*1000);
+  if(diasAtras > 7){
+    const confirma = await customConfirm(`Essa data é de ${Math.floor(diasAtras)} dias atrás. Confirma que a data/hora está certa antes de salvar?`, 'Confirmar data');
+    if(!confirma) return false;
+  }
 
   const duplicado = registros.find(r => r.dataGlicemia === dataGlicemiaISO && r.id !== editingId);
   if(duplicado){
