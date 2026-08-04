@@ -576,10 +576,15 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.7"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.8"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
+let _modoVoz = false;
+
 function _showCustomModal({message, title='Atenção', icon='⚠️', mode='alert', inputType='text', grande=false}){
+  if(_modoVoz){
+    return _showCustomModalPorVoz({message, title, mode});
+  }
   return new Promise(resolve=>{
     const overlay = document.getElementById('custom-modal-overlay');
     const box = overlay.querySelector('.cm-box');
@@ -631,6 +636,20 @@ function _showCustomModal({message, title='Atenção', icon='⚠️', mode='aler
     }
     overlay.classList.add('open');
   });
+}
+async function _showCustomModalPorVoz({message, title, mode}){
+  const texto = `${title? title+'. ':''}${String(message).replace(/\n+/g,'. ')}`;
+  if(mode==='confirm'){
+    await _falar(`${texto} Diga sim ou não.`);
+    const resp = (await _ouvir()||'').toLowerCase();
+    return /\bsim\b/.test(resp);
+  }
+  if(mode==='prompt'){
+    await _falar(texto);
+    return await _ouvir();
+  }
+  await _falar(texto);
+  return true;
 }
 function customAlert(message, title='Atenção', icon='⚠️'){ return _showCustomModal({message, title, icon, mode:'alert'}); }
 function customAlertPerigo(message, title){ return _showCustomModal({message, title, icon:'🚨', mode:'alert', grande:true}); }
@@ -1855,73 +1874,75 @@ async function iniciarPreenchimentoPorVoz(){
   const btn = document.getElementById('btn-voz');
   const original = btn.textContent;
   btn.disabled = true;
+  _modoVoz = true;
 
-  btn.textContent = '🎙️ Ouvindo: glicemia...';
-  await _falar('Qual o valor da glicemia?');
-  let glic = _extrairNumero(await _ouvir());
-  let tentativasGlic = 0;
-  while(glic===null && tentativasGlic < 2){
-    tentativasGlic++;
-    await _falar('Não entendi o valor da glicemia. Pode repetir, só o número?');
-    glic = _extrairNumero(await _ouvir());
-  }
-  if(glic!==null){
-    document.getElementById('in-glicemia').value = glic;
-  } else {
-    await _falar('Não consegui entender o valor da glicemia depois de algumas tentativas. Preencha esse campo manualmente e toque em salvar lançamento.');
+  try{
+    btn.textContent = '🎙️ Ouvindo: glicemia...';
+    await _falar('Qual o valor da glicemia?');
+    let glic = _extrairNumero(await _ouvir());
+    let tentativasGlic = 0;
+    while(glic===null && tentativasGlic < 2){
+      tentativasGlic++;
+      await _falar('Não entendi o valor da glicemia. Pode repetir, só o número?');
+      glic = _extrairNumero(await _ouvir());
+    }
+    if(glic!==null){
+      document.getElementById('in-glicemia').value = glic;
+    } else {
+      await _falar('Não consegui entender o valor da glicemia depois de algumas tentativas. Preencha esse campo manualmente e toque em salvar lançamento.');
+      return;
+    }
+
+    btn.textContent = '🎙️ Ouvindo: dose de insulina...';
+    await _falar('Qual a dose de insulina, em unidades?');
+    const dose = _extrairNumero(await _ouvir());
+    if(dose!==null){
+      const sel = document.getElementById('in-insulina');
+      let opcao = [...sel.options].find(o=> o.value && parseFloat(o.value)===dose);
+      if(!opcao){
+        // sem match exato: escolhe a opção cadastrada mais próxima do valor falado
+        const comValor = [...sel.options].filter(o=>o.value);
+        if(comValor.length){
+          opcao = comValor.reduce((mais,o)=> Math.abs(parseFloat(o.value)-dose) < Math.abs(parseFloat(mais.value)-dose) ? o : mais);
+        }
+      }
+      if(opcao) sel.value = opcao.value;
+    }
+
+    btn.textContent = '🎙️ Ouvindo: tipo de insulina...';
+    await _falar('Qual o tipo ou marca da insulina?');
+    const tipoFalado = (await _ouvir()||'').toLowerCase();
+    if(tipoFalado){
+      const selTipo = document.getElementById('in-tipo-insulina');
+      const opcaoTipo = [...selTipo.options].find(o=> o.value && tipoFalado.includes(o.value.toLowerCase()));
+      if(opcaoTipo) selTipo.value = opcaoTipo.value;
+    }
+
+    btn.textContent = '🎙️ Ouvindo: observação...';
+    await _falar('Alguma observação? Pode dizer "nenhuma" se não houver.');
+    const obsFalada = await _ouvir();
+    if(obsFalada && !/^nenhuma?$/i.test(obsFalada.trim())){
+      document.getElementById('in-obs').value = obsFalada;
+    }
+
+    btn.textContent = '🎙️ Ouvindo: curva do dia?';
+    await _falar('Isso faz parte de uma curva glicêmica do dia? Diga sim ou não.');
+    const curvaResp = (await _ouvir()||'').toLowerCase();
+    document.getElementById('in-curva').checked = /\bsim\b/.test(curvaResp);
+
+    btn.textContent = '🎙️ Salvando...';
+    await _falar('Salvando o lançamento.');
+    const ok = await salvarRegistro();
+    if(ok){
+      await _falar('Lançamento salvo com sucesso.');
+    } else {
+      await _falar('Não consegui salvar o lançamento. Revise os campos e tente novamente.');
+    }
+  } finally {
+    _modoVoz = false;
     btn.textContent = original;
     btn.disabled = false;
-    return;
   }
-
-  btn.textContent = '🎙️ Ouvindo: dose de insulina...';
-  await _falar('Qual a dose de insulina, em unidades?');
-  const dose = _extrairNumero(await _ouvir());
-  if(dose!==null){
-    const sel = document.getElementById('in-insulina');
-    let opcao = [...sel.options].find(o=> o.value && parseFloat(o.value)===dose);
-    if(!opcao){
-      // sem match exato: escolhe a opção cadastrada mais próxima do valor falado
-      const comValor = [...sel.options].filter(o=>o.value);
-      if(comValor.length){
-        opcao = comValor.reduce((mais,o)=> Math.abs(parseFloat(o.value)-dose) < Math.abs(parseFloat(mais.value)-dose) ? o : mais);
-      }
-    }
-    if(opcao) sel.value = opcao.value;
-  }
-
-  btn.textContent = '🎙️ Ouvindo: tipo de insulina...';
-  await _falar('Qual o tipo ou marca da insulina?');
-  const tipoFalado = (await _ouvir()||'').toLowerCase();
-  if(tipoFalado){
-    const selTipo = document.getElementById('in-tipo-insulina');
-    const opcaoTipo = [...selTipo.options].find(o=> o.value && tipoFalado.includes(o.value.toLowerCase()));
-    if(opcaoTipo) selTipo.value = opcaoTipo.value;
-  }
-
-  btn.textContent = '🎙️ Ouvindo: observação...';
-  await _falar('Alguma observação? Pode dizer "nenhuma" se não houver.');
-  const obsFalada = await _ouvir();
-  if(obsFalada && !/^nenhuma?$/i.test(obsFalada.trim())){
-    document.getElementById('in-obs').value = obsFalada;
-  }
-
-  btn.textContent = '🎙️ Ouvindo: curva do dia?';
-  await _falar('Isso faz parte de uma curva glicêmica do dia? Diga sim ou não.');
-  const curvaResp = (await _ouvir()||'').toLowerCase();
-  document.getElementById('in-curva').checked = /\bsim\b/.test(curvaResp);
-
-  btn.textContent = '🎙️ Salvando...';
-  await _falar('Salvando o lançamento.');
-  const ok = await salvarRegistro();
-  if(ok){
-    await _falar('Lançamento salvo com sucesso.');
-  } else {
-    await _falar('Não consegui salvar o lançamento. Revise os campos e tente novamente.');
-  }
-
-  btn.textContent = original;
-  btn.disabled = false;
 }
 
 /* ---------------- EXAMES ---------------- */
