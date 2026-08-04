@@ -376,7 +376,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       <div class="month-select-row">
         <label style="margin:0">Mês:</label>
         <select id="mensal-select" onchange="renderMensal()"></select>
-        <button class="btn secondary" onclick="exportarPDF()">Exportar PDF</button>
+        <button class="btn secondary" id="btn-exportar-pdf" onclick="exportarPDF()">Exportar PDF</button>
       </div>
       <div id="mensal-content"></div>
     </div>
@@ -616,7 +616,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev002.4"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev002.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1702,7 +1702,7 @@ function renderMensal(){
   });
 
   // guarda tudo que o relatório em PDF vai precisar, sem recalcular
-  window._mensalReportData = { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia };
+  window._mensalReportData = { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia };
 }
 function renderObsVetLista(key){
   const el = document.getElementById('obs-vet-lista');
@@ -1735,9 +1735,20 @@ async function adicionarObsVet(key){
 async function exportarPDF(){
   const d = window._mensalReportData;
   if(!d){ await customAlert('Abra o relatório mensal antes de exportar.'); return; }
-  const { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia } = d;
+  const { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia } = d;
   const docObs = await db.collection('relatoriosMensais').doc(key).get();
   const obs = (docObs.exists && docObs.data().observacoes) || [];
+
+  const btnExport = document.getElementById('btn-exportar-pdf');
+  const textoOriginal = btnExport ? btnExport.textContent : null;
+  if(btnExport){ btnExport.textContent = 'Gerando...'; btnExport.disabled = true; }
+
+  try{
+
+  // redesenha os gráficos do zero antes de capturar, pra garantir que nenhum tooltip de um toque
+  // anterior fique "grudado" na imagem exportada — e espera a animação padrão terminar
+  renderMensal();
+  await new Promise(r=>setTimeout(r, 1300));
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p','pt','a4');
@@ -1847,8 +1858,10 @@ async function exportarPDF(){
     ['Episódios de hiperglicemia (> '+configParam.hiper+' mg/dL)', String(s.hiperN)],
     ['Insulina total aplicada', `${s.insulinaTotal.toFixed(1)} UI`],
     ['Insulina média por dose', `${(s.insulinaMedia||0).toFixed(1)} UI`],
+    ['Dose média por peso (UI/kg)', doseKgMedia!==null ? doseKgMedia.toFixed(2) : '—'],
     ['Dias com registro', `${diasComRegistro} de ${totalDias}`],
     ['Faixa alvo configurada', `${configParam.alvoMin}–${configParam.alvoMax} mg/dL`],
+    ['Possíveis episódios de efeito Somogyi', String(episodiosSomogyi.length)],
   ], [280, CONTENT_W-280]);
   paragrafo(`Tendência: ${tendencia.replace('▲','sobiu').replace('▼','caiu').replace('=','estável')}${sPrev? ` (média do mês anterior: ${sPrev.media.toFixed(0)} mg/dL)`:''}.`);
 
@@ -1866,6 +1879,15 @@ async function exportarPDF(){
     ['Tarde (12h–18h)', buckets.tarde.length?mean(buckets.tarde).toFixed(0):'—', String(buckets.tarde.length)],
     ['Noite (18h–24h)', buckets.noite.length?mean(buckets.noite).toFixed(0):'—', String(buckets.noite.length)],
   ], [CONTENT_W-260, 130, 130]);
+
+  // ---------- EFEITO SOMOGYI ----------
+  secao('Monitoramento de efeito Somogyi (hipoglicemia seguida de rebote)');
+  if(episodiosSomogyi.length){
+    paragrafo(`O app identifica automaticamente quando uma glicemia alta (acima de ${configParam.hiper} mg/dL) aparece até 12h depois de uma glicemia baixa (abaixo de ${configParam.hipo} mg/dL). Neste mês, ${episodiosSomogyi.length} leitura(s) se encaixam nesse padrão — vale revisar com a veterinária antes de considerar aumentar a dose de insulina nesses casos.`);
+    tabela([['Data/hora','Glicemia (rebote)'], ...episodiosSomogyi.map(r=>[fmtDate(r.dataGlicemia), `${r.glicemia} mg/dL`])], [CONTENT_W-140,140]);
+  } else {
+    paragrafo('O app monitora automaticamente esse padrão a cada lançamento. Nenhum episódio identificado neste mês.');
+  }
 
   // ---------- PIORES EPISÓDIOS ----------
   secao('Piores episódios do mês');
@@ -1902,6 +1924,9 @@ async function exportarPDF(){
 
   rodape();
   pdf.save(`pitoco-relatorio-${key}.pdf`);
+  } finally {
+    if(btnExport){ btnExport.textContent = textoOriginal; btnExport.disabled = false; }
+  }
 }
 
 /* ---------------- FICHA DO PITOCO ---------------- */
