@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.14"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.17"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1907,37 +1907,52 @@ async function iniciarPreenchimentoPorVoz(){
   btn.disabled = true;
   _modoVoz = true;
 
+  const _CANCELADO = Symbol('cancelado');
+  async function _ouvirC(){
+    const texto = await _ouvir();
+    if(texto && /\bcancela(r|do)?\b/i.test(texto)){
+      throw _CANCELADO;
+    }
+    return texto;
+  }
+
   try{
     btn.textContent = '🎙️ Ouvindo: glicemia...';
-    await _falar('Qual o valor da glicemia?');
+    await _falar('Qual o valor da glicemia? Você pode dizer "cancelar" a qualquer momento pra interromper.');
     function _glicemiaValida(texto){
       const n = _extrairNumero(texto);
       if(n===null) return null;
-      if(n < 20 || n > 800) return null; // fora da faixa fisiológica plausível — provavelmente reconhecimento errado
+      if(n < 10 || n > 800) return null; // fora da faixa fisiológica plausível — provavelmente reconhecimento errado
       return n;
     }
-    let glic = _glicemiaValida(await _ouvir());
+    let brutoGlic = await _ouvirC();
+    let glic = _glicemiaValida(brutoGlic);
     let tentativasGlic = 0;
     while(glic===null && tentativasGlic < 2){
       tentativasGlic++;
-      await _falar('Não entendi um valor de glicemia válido. Pode repetir, só o número, entre 20 e 800?');
-      glic = _glicemiaValida(await _ouvir());
+      if(brutoGlic){
+        await _falar(`Entendi "${brutoGlic}", mas isso não é um número de glicemia válido. Pode repetir, só o número?`);
+      } else {
+        await _falar('Não ouvi nada. Pode repetir o valor da glicemia?');
+      }
+      brutoGlic = await _ouvirC();
+      glic = _glicemiaValida(brutoGlic);
     }
     if(glic!==null){
       document.getElementById('in-glicemia').value = glic;
     } else {
-      await _falar('Não consegui entender o valor da glicemia depois de algumas tentativas. Preencha esse campo manualmente e toque em salvar lançamento.');
+      await _falar(`Não consegui entender o valor da glicemia. A última coisa que entendi foi "${brutoGlic||'nada'}". Preencha esse campo manualmente e toque em salvar lançamento.`);
       return;
     }
 
     btn.textContent = '🎙️ Ouvindo: dose de insulina...';
     await _falar('Qual a dose de insulina, em unidades?');
-    let dose = _extrairNumero(await _ouvir());
+    let dose = _extrairNumero(await _ouvirC());
     let tentativasDose = 0;
     while((dose===null || dose<0.5 || dose>30) && tentativasDose < 2){
       tentativasDose++;
       await _falar('Não entendi a dose de insulina. Pode repetir, só o número de unidades?');
-      dose = _extrairNumero(await _ouvir());
+      dose = _extrairNumero(await _ouvirC());
     }
     if(dose!==null && dose>=0.5 && dose<=30){
       const sel = document.getElementById('in-insulina');
@@ -1965,13 +1980,13 @@ async function iniciarPreenchimentoPorVoz(){
       const selTipo = document.getElementById('in-tipo-insulina');
       return [...selTipo.options].find(o=> o.value && t.includes(o.value.toLowerCase())) || null;
     }
-    let opcaoTipo = _combinarTipo(await _ouvir());
+    let opcaoTipo = _combinarTipo(await _ouvirC());
     let tentativasTipo = 0;
     while(!opcaoTipo && tentativasTipo < 2){
       tentativasTipo++;
       const cadastrados = [...document.getElementById('in-tipo-insulina').options].filter(o=>o.value).map(o=>o.value).join(', ');
       await _falar(`Não reconheci esse tipo entre os cadastrados: ${cadastrados||'nenhum cadastrado ainda'}. Pode repetir?`);
-      opcaoTipo = _combinarTipo(await _ouvir());
+      opcaoTipo = _combinarTipo(await _ouvirC());
     }
     if(opcaoTipo){
       document.getElementById('in-tipo-insulina').value = opcaoTipo.value;
@@ -1982,14 +1997,14 @@ async function iniciarPreenchimentoPorVoz(){
 
     btn.textContent = '🎙️ Ouvindo: observação...';
     await _falar('Alguma observação? Pode dizer "nenhuma" se não houver.');
-    const obsFalada = await _ouvir();
+    const obsFalada = await _ouvirC();
     if(obsFalada && !/^nenhuma?$/i.test(obsFalada.trim())){
       document.getElementById('in-obs').value = obsFalada;
     }
 
     btn.textContent = '🎙️ Ouvindo: curva do dia?';
     await _falar('Isso faz parte de uma curva glicêmica do dia? Diga sim ou não.');
-    const curvaResp = (await _ouvir()||'').toLowerCase();
+    const curvaResp = (await _ouvirC()||'').toLowerCase();
     document.getElementById('in-curva').checked = /\bsim\b/.test(curvaResp);
 
     btn.textContent = '🎙️ Salvando...';
@@ -1999,6 +2014,12 @@ async function iniciarPreenchimentoPorVoz(){
       await _falar('Lançamento salvo com sucesso.');
     } else {
       await _falar('Não consegui salvar o lançamento. Revise os campos e tente novamente.');
+    }
+  } catch(err){
+    if(err === _CANCELADO){
+      await _falar('Lançamento cancelado. Nada foi salvo.');
+    } else {
+      throw err;
     }
   } finally {
     _modoVoz = false;
