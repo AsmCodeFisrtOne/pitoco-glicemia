@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.8"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.9"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1879,12 +1879,18 @@ async function iniciarPreenchimentoPorVoz(){
   try{
     btn.textContent = '🎙️ Ouvindo: glicemia...';
     await _falar('Qual o valor da glicemia?');
-    let glic = _extrairNumero(await _ouvir());
+    function _glicemiaValida(texto){
+      const n = _extrairNumero(texto);
+      if(n===null) return null;
+      if(n < 20 || n > 800) return null; // fora da faixa fisiológica plausível — provavelmente reconhecimento errado
+      return n;
+    }
+    let glic = _glicemiaValida(await _ouvir());
     let tentativasGlic = 0;
     while(glic===null && tentativasGlic < 2){
       tentativasGlic++;
-      await _falar('Não entendi o valor da glicemia. Pode repetir, só o número?');
-      glic = _extrairNumero(await _ouvir());
+      await _falar('Não entendi um valor de glicemia válido. Pode repetir, só o número, entre 20 e 800?');
+      glic = _glicemiaValida(await _ouvir());
     }
     if(glic!==null){
       document.getElementById('in-glicemia').value = glic;
@@ -1896,7 +1902,7 @@ async function iniciarPreenchimentoPorVoz(){
     btn.textContent = '🎙️ Ouvindo: dose de insulina...';
     await _falar('Qual a dose de insulina, em unidades?');
     const dose = _extrairNumero(await _ouvir());
-    if(dose!==null){
+    if(dose!==null && dose>=0.5 && dose<=30){
       const sel = document.getElementById('in-insulina');
       let opcao = [...sel.options].find(o=> o.value && parseFloat(o.value)===dose);
       if(!opcao){
