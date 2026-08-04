@@ -311,7 +311,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
         <textarea id="in-obs" placeholder="Opcional"></textarea>
       </div>
       <div class="field">
-        <label><input type="checkbox" id="in-curva" style="width:auto;margin-right:6px;">Faz parte de uma curva glicêmica do dia</label>
+        <label><input type="checkbox" id="in-curva" style="width:auto;margin-right:6px;">Adicionar também à curva glicêmica em andamento (se houver)</label>
       </div>
       <div class="btn-row">
         <button class="btn" onclick="salvarRegistro()">Salvar lançamento</button>
@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.5"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.6"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 function _showCustomModal({message, title='Atenção', icon='⚠️', mode='alert', inputType='text', grande=false}){
@@ -1178,6 +1178,19 @@ async function salvarRegistro(){
     if(editingId) await db.collection('registros').doc(editingId).update(dado);
     else await db.collection('registros').add({...dado, createdAt: new Date().toISOString()});
     limparForm();
+
+    if(dado.curvaDia){
+      const ativa = curvaAtiva();
+      if(ativa){
+        const jaExiste = ativa.pontos.find(p=>p.horario===dataGlicemiaISO);
+        if(!jaExiste){
+          await db.collection('curvas').doc(ativa.id).update({ pontos: [...ativa.pontos, { glicemia, horario: dataGlicemiaISO, observacao: dado.observacao }] });
+        }
+      } else {
+        await customAlert('Este lançamento foi salvo, mas não há nenhuma curva glicêmica em andamento no momento — ele não foi adicionado a nenhuma curva. Inicie uma curva na aba "Curva glicêmica" se quiser agrupar os próximos lançamentos.');
+      }
+    }
+
     if(glicemia < configParam.hipo){
       await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — abaixo do limite de hipoglicemia (${configParam.hipo} mg/dL).\n\nMonitore o Pitoco de perto. Se houver sinais de fraqueza, tremores ou desorientação, contate a veterinária imediatamente.`, 'HIPOGLICEMIA DETECTADA');
     } else if(glicemia > configParam.hiper){
