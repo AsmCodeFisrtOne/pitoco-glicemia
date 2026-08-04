@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.11"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.12"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1835,7 +1835,9 @@ function _falar(texto){
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = 'pt-BR';
     let resolvido = false;
-    const finalizar = ()=>{ if(!resolvido){ resolvido = true; resolve(); } };
+    // pequena folga depois do "terminei de falar" do navegador, porque em alguns
+    // aparelhos o evento dispara um pouco antes do áudio realmente acabar de tocar
+    const finalizar = ()=>{ if(!resolvido){ resolvido = true; setTimeout(resolve, 350); } };
     u.onend = finalizar;
     u.onerror = finalizar;
     // salvaguarda: se o navegador nunca disparar onend/onerror (acontece em alguns Android),
