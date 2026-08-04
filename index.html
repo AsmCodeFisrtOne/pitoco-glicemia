@@ -576,7 +576,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev000.12"; // incrementar em +0.1 a cada atualização entregue
+const APP_VERSION = "Beta_Rev000.14"; // incrementar em +0.1 a cada atualização entregue
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1831,18 +1831,18 @@ let _reconhecimentoAtivo = null;
 function _falar(texto){
   return new Promise(resolve=>{
     if(!('speechSynthesis' in window)){ resolve(); return; }
-    speechSynthesis.cancel(); // limpa qualquer fala pendente/travada antes de começar uma nova
-    const u = new SpeechSynthesisUtterance(texto);
+    if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto+' .'); // pausa extra no final ajuda a evitar corte da última palavra
     u.lang = 'pt-BR';
     let resolvido = false;
     // pequena folga depois do "terminei de falar" do navegador, porque em alguns
     // aparelhos o evento dispara um pouco antes do áudio realmente acabar de tocar
-    const finalizar = ()=>{ if(!resolvido){ resolvido = true; setTimeout(resolve, 350); } };
+    const finalizar = ()=>{ if(!resolvido){ resolvido = true; setTimeout(resolve, 600); } };
     u.onend = finalizar;
     u.onerror = finalizar;
     // salvaguarda: se o navegador nunca disparar onend/onerror (acontece em alguns Android),
     // não deixa o fluxo travado esperando pra sempre
-    setTimeout(finalizar, Math.max(4000, texto.length*90));
+    setTimeout(finalizar, Math.max(4500, texto.length*100));
     speechSynthesis.speak(u);
   });
 }
@@ -1932,7 +1932,13 @@ async function iniciarPreenchimentoPorVoz(){
 
     btn.textContent = '🎙️ Ouvindo: dose de insulina...';
     await _falar('Qual a dose de insulina, em unidades?');
-    const dose = _extrairNumero(await _ouvir());
+    let dose = _extrairNumero(await _ouvir());
+    let tentativasDose = 0;
+    while((dose===null || dose<0.5 || dose>30) && tentativasDose < 2){
+      tentativasDose++;
+      await _falar('Não entendi a dose de insulina. Pode repetir, só o número de unidades?');
+      dose = _extrairNumero(await _ouvir());
+    }
     if(dose!==null && dose>=0.5 && dose<=30){
       const sel = document.getElementById('in-insulina');
       let opcao = [...sel.options].find(o=> o.value && parseFloat(o.value)===dose);
@@ -1943,16 +1949,35 @@ async function iniciarPreenchimentoPorVoz(){
           opcao = comValor.reduce((mais,o)=> Math.abs(parseFloat(o.value)-dose) < Math.abs(parseFloat(mais.value)-dose) ? o : mais);
         }
       }
-      if(opcao) sel.value = opcao.value;
+      if(opcao){
+        sel.value = opcao.value;
+        await _falar(`Entendi ${opcao.value} unidades.`);
+      }
+    } else {
+      await _falar('Não consegui entender a dose. Você pode preencher esse campo manualmente depois.');
     }
 
     btn.textContent = '🎙️ Ouvindo: tipo de insulina...';
     await _falar('Qual o tipo ou marca da insulina?');
-    const tipoFalado = (await _ouvir()||'').toLowerCase();
-    if(tipoFalado){
+    function _combinarTipo(texto){
+      if(!texto) return null;
+      const t = texto.toLowerCase();
       const selTipo = document.getElementById('in-tipo-insulina');
-      const opcaoTipo = [...selTipo.options].find(o=> o.value && tipoFalado.includes(o.value.toLowerCase()));
-      if(opcaoTipo) selTipo.value = opcaoTipo.value;
+      return [...selTipo.options].find(o=> o.value && t.includes(o.value.toLowerCase())) || null;
+    }
+    let opcaoTipo = _combinarTipo(await _ouvir());
+    let tentativasTipo = 0;
+    while(!opcaoTipo && tentativasTipo < 2){
+      tentativasTipo++;
+      const cadastrados = [...document.getElementById('in-tipo-insulina').options].filter(o=>o.value).map(o=>o.value).join(', ');
+      await _falar(`Não reconheci esse tipo entre os cadastrados: ${cadastrados||'nenhum cadastrado ainda'}. Pode repetir?`);
+      opcaoTipo = _combinarTipo(await _ouvir());
+    }
+    if(opcaoTipo){
+      document.getElementById('in-tipo-insulina').value = opcaoTipo.value;
+      await _falar(`Entendi ${opcaoTipo.value}.`);
+    } else {
+      await _falar('Não consegui identificar o tipo de insulina. Você pode preencher esse campo manualmente depois.');
     }
 
     btn.textContent = '🎙️ Ouvindo: observação...';
