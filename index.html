@@ -269,28 +269,40 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
 
     <div class="card">
       <h2>Novo lançamento</h2>
+      <div class="btn-row" style="margin-bottom:12px">
+        <button class="btn" id="btn-modo-glicemia" type="button" onclick="setModoLancamento('glicemia')" style="font-size:12.5px;padding:8px 12px">Com glicemia</button>
+        <button class="btn secondary" id="btn-modo-obs" type="button" onclick="setModoLancamento('observacao')" style="font-size:12.5px;padding:8px 12px">Só observação (sem glicemia)</button>
+      </div>
       <div class="field" id="bloco-voz">
         <button class="btn secondary" type="button" onclick="iniciarPreenchimentoPorVoz()" id="btn-voz">🎙️ Preencher por voz</button>
         <p style="font-size:11.5px;color:var(--muted);margin-top:6px">A entrada por voz é resumida e limitada — funciona melhor em ambiente silencioso, com respostas curtas (ex: "duzentos", "quatro", "NPH"). Ao final das perguntas, o lançamento é salvo automaticamente.</p>
       </div>
-      <div class="grid">
-        <div class="field">
-          <label>Glicemia (mg/dL)</label>
-          <input type="number" id="in-glicemia" placeholder="Ex: 215">
+      <div id="bloco-dados-glicemia">
+        <div class="grid">
+          <div class="field">
+            <label>Glicemia (mg/dL)</label>
+            <input type="number" id="in-glicemia" placeholder="Ex: 215">
+          </div>
+          <div class="field">
+            <label>Data/hora da glicemia</label>
+            <input type="datetime-local" id="in-data-glicemia">
+          </div>
         </div>
-        <div class="field">
-          <label>Data/hora da glicemia</label>
-          <input type="datetime-local" id="in-data-glicemia">
+        <div class="grid">
+          <div class="field">
+            <label>Dose de insulina (UI)</label>
+            <select id="in-insulina"><option value="">Selecione...</option></select>
+          </div>
+          <div class="field">
+            <label>Tipo/marca da insulina</label>
+            <select id="in-tipo-insulina"><option value="">Selecione...</option></select>
+          </div>
         </div>
       </div>
-      <div class="grid">
+      <div id="bloco-dados-obs" style="display:none">
         <div class="field">
-          <label>Dose de insulina (UI)</label>
-          <select id="in-insulina"><option value="">Selecione...</option></select>
-        </div>
-        <div class="field">
-          <label>Tipo/marca da insulina</label>
-          <select id="in-tipo-insulina"><option value="">Selecione...</option></select>
+          <label>Data/hora da observação</label>
+          <input type="datetime-local" id="in-data-glicemia-obs">
         </div>
       </div>
       <details class="more-details">
@@ -325,6 +337,21 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
             <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Apetite alterado" class="chk-sinal" style="width:auto">Apetite alterado</label>
             <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Letargia" class="chk-sinal" style="width:auto">Letargia</label>
             <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Vômito" class="chk-sinal" style="width:auto">Vômito</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Diarreia" class="chk-sinal" style="width:auto">Diarreia</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Urinando mais que o normal" class="chk-sinal" style="width:auto">Urinando mais que o normal</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Perda de peso perceptível" class="chk-sinal" style="width:auto">Perda de peso perceptível</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Fraqueza / tremores" class="chk-sinal" style="width:auto">Fraqueza / tremores</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Desorientação / confusão" class="chk-sinal" style="width:auto">Desorientação / confusão</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Convulsão" class="chk-sinal" style="width:auto">Convulsão</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Opacidade nos olhos (catarata)" class="chk-sinal" style="width:auto">Opacidade nos olhos (catarata)</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" value="Hálito com odor forte/diferente" class="chk-sinal" style="width:auto">Hálito com odor forte/diferente</label>
+          </div>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="in-atividade-fisica-check" style="width:auto;margin-right:6px" onchange="document.getElementById('atividade-fisica-horarios').style.display=this.checked?'grid':'none'">Fez atividade física</label>
+          <div class="grid" id="atividade-fisica-horarios" style="display:none;margin-top:8px">
+            <div class="field"><label>Início</label><input type="datetime-local" id="in-atividade-inicio"></div>
+            <div class="field"><label>Término</label><input type="datetime-local" id="in-atividade-fim"></div>
           </div>
         </div>
       </details>
@@ -367,6 +394,10 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       <h2>Últimos 7 dias</h2>
       <div id="semanal-stats" class="stats"></div>
       <div class="chart-wrap"><canvas id="chart-semanal" height="180"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Sinais clínicos, atividade física e observações</h2>
+      <div id="semanal-obs"></div>
     </div>
   </section>
 
@@ -525,6 +556,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       <h2>Como usar cada aba</h2>
       <h3>Lançar</h3>
       <p style="font-size:13.5px">Registro rápido de uma medição avulsa: glicemia, insulina (dose/tipo escolhidos das listas cadastradas em Configurações), horários e observação. Data/hora vêm pré-preenchidas com o momento atual.</p>
+      <p style="font-size:13.5px">No topo do formulário, dá pra alternar pro modo <strong>"Só observação (sem glicemia)"</strong> — útil quando você quer registrar algo (vômito, letargia, atividade física) sem ter medido a glicemia naquele momento. Esses lançamentos não entram nas médias, gráficos ou contagem de hipo/hiper — aparecem separados, com o ícone 📝, na tabela de Registros e nos relatórios semanal/mensal (seção própria de sinais clínicos e observações avulsas).</p>
       <h3>Registros</h3>
       <p style="font-size:13.5px">Histórico completo, agrupado por mês, com opção de editar ou excluir cada lançamento.</p>
       <h3>Curva glicêmica</h3>
@@ -594,7 +626,9 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
         <thead><tr><th>Recurso</th><th>O que faz</th></tr></thead>
         <tbody>
           <tr><td>Alerta de efeito Somogyi</td><td>Quando uma glicemia alta é lançada até 12h depois de uma glicemia baixa, o app avisa no próprio alerta de hiperglicemia que isso pode ser hiperglicemia de rebote (efeito Somogyi) — o corpo reage a uma hipoglicemia produzindo hormônios que sobem a glicemia depois. Nesse caso, aumentar a dose de insulina pode ser o oposto do que o Pitoco precisa. O ícone ⚠️ ao lado da glicemia na tabela de Registros marca esses casos.</td></tr>
-          <tr><td>Sinais clínicos</td><td>Na tela "Lançar" (dentro de "Mais detalhes"), dá pra marcar sinais observados junto com a glicemia: sede aumentada, apetite alterado, letargia, vômito. Aparecem como etiquetas na tabela de Registros — ajuda a lembrar o contexto de leituras fora do esperado.</td></tr>
+          <tr><td>Sinais clínicos</td><td>Na tela "Lançar" (dentro de "Mais detalhes"), dá pra marcar sinais observados junto com a glicemia: sede aumentada, apetite alterado, letargia, vômito, diarreia, urinando mais, perda de peso, fraqueza/tremores, desorientação, convulsão, opacidade nos olhos, hálito diferente. Aparecem como etiquetas na tabela de Registros e resumidos nos relatórios semanal/mensal.</td></tr>
+          <tr><td>Atividade física</td><td>Checkbox em "Mais detalhes" que, quando marcado, revela campos de horário de início e término. Aparece na tabela de Registros e é listado nos relatórios semanal/mensal.</td></tr>
+          <tr><td>Só observação (sem glicemia)</td><td>Alternador no topo da tela "Lançar" para registrar sinais clínicos, atividade física ou uma nota livre sem precisar informar um valor de glicemia. Não entra em nenhum cálculo (média, hipo/hiper, gráficos) — aparece separado, com o ícone 📝, na tabela de Registros.</td></tr>
           <tr><td>Lembrete de curva atrasada</td><td>Se já passaram 14 dias ou mais desde a última curva glicêmica completa, a aba "Curva glicêmica" mostra um aviso sugerindo fazer uma nova em breve.</td></tr>
           <tr><td>Local de aplicação e rodízio</td><td>Campo opcional em "Mais detalhes" pra marcar onde a insulina foi aplicada (pescoço, lombo, coxa — cada lado). O app lembra o último local usado e sugere o próximo na rotação, ajudando a evitar aplicar sempre no mesmo lugar (o que pode endurecer o tecido e atrapalhar a absorção da insulina).</td></tr>
           <tr><td>Retorno ao basal (na curva)</td><td>No resultado de cada curva glicêmica, compara a glicemia inicial (antes da insulina) com a última leitura registrada. Se a última leitura já está perto do valor inicial, sugere que o efeito da insulina está acabando na hora certa; se ainda está bem baixa, pode indicar que o efeito ainda está ativo perto da próxima dose.</td></tr>
@@ -622,7 +656,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev003.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev003.3"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1278,13 +1312,28 @@ function renderGauge(container, valor){
 function renderUltimaLeitura(){
   const wrap = document.getElementById('last-gauge-wrap');
   const info = document.getElementById('last-info');
-  if(!registros.length){ wrap.innerHTML=''; info.textContent='Sem lançamentos ainda.'; return; }
-  const ultimo = registros[0];
+  const ultimo = registros.find(r=> r.glicemia !== null && r.glicemia !== undefined);
+  if(!ultimo){ wrap.innerHTML=''; info.textContent='Sem lançamentos com glicemia ainda.'; return; }
   renderGauge(wrap, ultimo.glicemia);
   info.textContent = `${ultimo.glicemia} mg/dL em ${fmtDate(ultimo.dataGlicemia)}`;
 }
 
 /* ---------------- SALVAR / EDITAR / EXCLUIR REGISTRO ---------------- */
+let modoLancamento = 'glicemia';
+function setModoLancamento(modo){
+  modoLancamento = modo;
+  const ehObs = modo === 'observacao';
+  document.getElementById('bloco-dados-glicemia').style.display = ehObs ? 'none' : 'block';
+  document.getElementById('bloco-dados-obs').style.display = ehObs ? 'block' : 'none';
+  document.getElementById('btn-modo-glicemia').classList.toggle('secondary', ehObs);
+  document.getElementById('btn-modo-obs').classList.toggle('secondary', !ehObs);
+  if(ehObs){
+    // no modo só-observação, os sinais clínicos e atividade física são o foco — já abre expandido
+    const det = document.querySelector('details.more-details');
+    if(det) det.open = true;
+    document.getElementById('in-data-glicemia-obs').value = document.getElementById('in-data-glicemia-obs').value || toLocalInput(new Date());
+  }
+}
 function sugerirLocalAplicacao(){
   const el = document.getElementById('sugestao-local');
   if(!el) return;
@@ -1296,17 +1345,29 @@ function sugerirLocalAplicacao(){
   el.textContent = `Última aplicação: ${ultimoComLocal.localAplicacao}.${sugestao? ' Sugestão de rodízio: '+sugestao+'.' : ''}`;
 }
 async function salvarRegistro(){
-  const glicemia = parseFloat(document.getElementById('in-glicemia').value);
-  if(isNaN(glicemia)){ await customAlert('Informe a glicemia.'); return false; }
-  const dataGlicemia = document.getElementById('in-data-glicemia').value || toLocalInput(new Date());
-  const dataGlicemiaISO = new Date(dataGlicemia).toISOString();
+  const ehObs = modoLancamento === 'observacao';
+  let glicemia = null;
+  let dataGlicemiaISO;
 
-  // trava de data: futuro é bloqueado; passado muito distante só avisa, não bloqueia
+  if(ehObs){
+    const textoObs = document.getElementById('in-obs').value.trim();
+    if(!textoObs){ await customAlert('Escreva uma observação — no modo "só observação" o texto é obrigatório, já que não há valor de glicemia.'); return false; }
+    const dataObs = document.getElementById('in-data-glicemia-obs').value || toLocalInput(new Date());
+    dataGlicemiaISO = new Date(dataObs).toISOString();
+  } else {
+    glicemia = parseFloat(document.getElementById('in-glicemia').value);
+    if(isNaN(glicemia)){ await customAlert('Informe a glicemia.'); return false; }
+    const dataGlicemia = document.getElementById('in-data-glicemia').value || toLocalInput(new Date());
+    dataGlicemiaISO = new Date(dataGlicemia).toISOString();
+  }
+
+  // trava de data: futuro é bloqueado; passado muito distante só avisa, não bloqueia (vale pros dois modos)
   const agora = Date.now();
   const tGlicemia = new Date(dataGlicemiaISO).getTime();
   if(tGlicemia > agora + 5*60*1000){ // tolerância de 5min pra pequenas diferenças de relógio
-    await customAlert('A data/hora informada está no futuro. Não é possível lançar uma glicemia que ainda não aconteceu — confira o campo de data/hora.');
-    document.getElementById('in-data-glicemia').value = toLocalInput(new Date());
+    await customAlert('A data/hora informada está no futuro. Não é possível lançar algo que ainda não aconteceu — confira o campo de data/hora.');
+    if(ehObs) document.getElementById('in-data-glicemia-obs').value = toLocalInput(new Date());
+    else document.getElementById('in-data-glicemia').value = toLocalInput(new Date());
     return false;
   }
   const diasAtras = (agora - tGlicemia)/(24*60*60*1000);
@@ -1315,30 +1376,37 @@ async function salvarRegistro(){
     if(!confirma) return false;
   }
 
-  const duplicado = registros.find(r => r.dataGlicemia === dataGlicemiaISO && r.id !== editingId);
-  if(duplicado){
-    await customAlert(`Já existe um lançamento registrado exatamente em ${fmtDate(duplicado.dataGlicemia)} (glicemia ${duplicado.glicemia} mg/dL).\n\nAjuste o minuto da data/hora deste lançamento antes de salvar, para não confundir com o outro.`);
-    document.getElementById('in-data-glicemia').value = toLocalInput(new Date());
-    return false;
+  if(!ehObs){
+    const duplicado = registros.find(r => r.dataGlicemia === dataGlicemiaISO && r.id !== editingId && r.glicemia!==null);
+    if(duplicado){
+      await customAlert(`Já existe um lançamento registrado exatamente em ${fmtDate(duplicado.dataGlicemia)} (glicemia ${duplicado.glicemia} mg/dL).\n\nAjuste o minuto da data/hora deste lançamento antes de salvar, para não confundir com o outro.`);
+      document.getElementById('in-data-glicemia').value = toLocalInput(new Date());
+      return false;
+    }
   }
 
   const dado = {
     petId: PET_ID,
     glicemia: glicemia,
+    apenasObservacao: ehObs,
     dataGlicemia: dataGlicemiaISO,
-    insulinaDose: parseFloat(document.getElementById('in-insulina').value) || null,
-    insulinaTipo: document.getElementById('in-tipo-insulina').value || null,
+    insulinaDose: ehObs ? null : (parseFloat(document.getElementById('in-insulina').value) || null),
+    insulinaTipo: ehObs ? null : (document.getElementById('in-tipo-insulina').value || null),
     dataInsulina: document.getElementById('in-data-insulina').value ? new Date(document.getElementById('in-data-insulina').value).toISOString() : null,
     ultimaRefeicao: document.getElementById('in-refeicao').value ? new Date(document.getElementById('in-refeicao').value).toISOString() : null,
     observacao: document.getElementById('in-obs').value || null,
-    curvaDia: document.getElementById('in-curva').checked,
-    localAplicacao: document.getElementById('in-local-aplicacao').value || null,
+    curvaDia: ehObs ? false : document.getElementById('in-curva').checked,
+    localAplicacao: ehObs ? null : (document.getElementById('in-local-aplicacao').value || null),
     sinaisClinicos: [...document.querySelectorAll('.chk-sinal:checked')].map(c=>c.value),
+    atividadeFisica: document.getElementById('in-atividade-fisica-check').checked ? {
+      inicio: document.getElementById('in-atividade-inicio').value ? new Date(document.getElementById('in-atividade-inicio').value).toISOString() : null,
+      fim: document.getElementById('in-atividade-fim').value ? new Date(document.getElementById('in-atividade-fim').value).toISOString() : null
+    } : null,
     updatedAt: new Date().toISOString()
   };
 
   // efeito Somogyi: hipoglicemia seguida de hiperglicemia de rebote em poucas horas
-  if(glicemia > configParam.hiper){
+  if(!ehObs && glicemia > configParam.hiper){
     const janelaMs = 12*60*60*1000;
     const tAtual = new Date(dataGlicemiaISO).getTime();
     const hipoRecente = registros.find(r=>{
@@ -1405,9 +1473,9 @@ async function salvarRegistro(){
       }
     }
 
-    if(glicemia < configParam.hipo){
+    if(!ehObs && glicemia < configParam.hipo){
       await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — abaixo do limite de hipoglicemia (${configParam.hipo} mg/dL).\n\nMonitore o Pitoco de perto. Se houver sinais de fraqueza, tremores ou desorientação, contate a veterinária imediatamente.`, 'HIPOGLICEMIA DETECTADA');
-    } else if(glicemia > configParam.hiper){
+    } else if(!ehObs && glicemia > configParam.hiper){
       const avisoSomogyi = dado.possivelSomogyi ? '\n\nATENÇÃO: houve uma hipoglicemia nas últimas 12h antes desta leitura — isso pode ser um efeito Somogyi (hiperglicemia de rebote), não necessariamente falta de insulina. Não aumente a dose sem falar com a veterinária.' : '';
       await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — acima do limite de hiperglicemia (${configParam.hiper} mg/dL).\n\nMonitore o Pitoco e considere contatar a veterinária conforme orientação do tratamento.${avisoSomogyi}`, 'HIPERGLICEMIA DETECTADA');
     }
@@ -1427,7 +1495,13 @@ function limparForm(){
   document.getElementById('in-curva').checked=false;
   document.getElementById('in-local-aplicacao').value='';
   document.querySelectorAll('.chk-sinal').forEach(c=>c.checked=false);
+  document.getElementById('in-atividade-fisica-check').checked=false;
+  document.getElementById('in-atividade-inicio').value='';
+  document.getElementById('in-atividade-fim').value='';
+  document.getElementById('atividade-fisica-horarios').style.display='none';
   document.getElementById('in-data-glicemia').value = toLocalInput(new Date());
+  document.getElementById('in-data-glicemia-obs').value = toLocalInput(new Date());
+  setModoLancamento('glicemia');
   const det = document.querySelector('details.more-details');
   if(det) det.open = false;
   editingId = null;
@@ -1437,8 +1511,14 @@ function editarRegistro(id){
   const r = registros.find(x=>x.id===id);
   if(!r) return;
   editingId = id;
-  document.getElementById('in-glicemia').value = r.glicemia;
-  document.getElementById('in-data-glicemia').value = toLocalInput(new Date(r.dataGlicemia));
+  const ehObsRow = r.glicemia===null || r.glicemia===undefined;
+  setModoLancamento(ehObsRow ? 'observacao' : 'glicemia');
+  if(ehObsRow){
+    document.getElementById('in-data-glicemia-obs').value = toLocalInput(new Date(r.dataGlicemia));
+  } else {
+    document.getElementById('in-glicemia').value = r.glicemia;
+    document.getElementById('in-data-glicemia').value = toLocalInput(new Date(r.dataGlicemia));
+  }
   document.getElementById('in-insulina').value = r.insulinaDose||'';
   document.getElementById('in-tipo-insulina').value = r.insulinaTipo||'';
   document.getElementById('in-data-insulina').value = r.dataInsulina? toLocalInput(new Date(r.dataInsulina)) : '';
@@ -1447,8 +1527,12 @@ function editarRegistro(id){
   document.getElementById('in-curva').checked = !!r.curvaDia;
   document.getElementById('in-local-aplicacao').value = r.localAplicacao||'';
   document.querySelectorAll('.chk-sinal').forEach(c=> c.checked = (r.sinaisClinicos||[]).includes(c.value));
+  document.getElementById('in-atividade-fisica-check').checked = !!r.atividadeFisica;
+  document.getElementById('in-atividade-inicio').value = (r.atividadeFisica&&r.atividadeFisica.inicio) ? toLocalInput(new Date(r.atividadeFisica.inicio)) : '';
+  document.getElementById('in-atividade-fim').value = (r.atividadeFisica&&r.atividadeFisica.fim) ? toLocalInput(new Date(r.atividadeFisica.fim)) : '';
+  document.getElementById('atividade-fisica-horarios').style.display = r.atividadeFisica ? 'grid' : 'none';
   const det = document.querySelector('details.more-details');
-  if(det) det.open = !!(r.dataInsulina || r.ultimaRefeicao || r.localAplicacao || (r.sinaisClinicos&&r.sinaisClinicos.length));
+  if(det) det.open = !!(r.dataInsulina || r.ultimaRefeicao || r.localAplicacao || r.atividadeFisica || (r.sinaisClinicos&&r.sinaisClinicos.length) || ehObsRow);
   document.getElementById('cancel-edit').style.display='inline-block';
   document.querySelector('[data-tab="lancar"]').click();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1471,21 +1555,26 @@ function renderMonths(){
   const keys = Object.keys(groups).sort().reverse();
   container.innerHTML = keys.map((k,idx)=>{
     const list = groups[k];
-    const vals = list.map(r=>r.glicemia);
+    const vals = list.filter(r=>r.glicemia!==null && r.glicemia!==undefined).map(r=>r.glicemia);
     const rows = list.map(r=>{
-      const cls = classifica(r.glicemia);
+      const ehObsRow = r.glicemia===null || r.glicemia===undefined;
+      const cls = ehObsRow ? '' : classifica(r.glicemia);
+      const celulaGlicemia = ehObsRow
+        ? `<span class="pill alvo">📝 Observação</span>`
+        : `${r.glicemia}${r.possivelSomogyi?' <span title="Possível efeito Somogyi">⚠️</span>':''}`;
+      const atividadeTxt = r.atividadeFisica ? `<br><span style="color:var(--muted);font-size:11.5px">🏃 Atividade física${r.atividadeFisica.inicio?': '+new Date(r.atividadeFisica.inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}${r.atividadeFisica.fim?' – '+new Date(r.atividadeFisica.fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span>` : '';
       return `<tr class="${cls}">
         <td class="mono">${fmtDate(r.dataGlicemia)}</td>
-        <td class="mono g">${r.glicemia}${r.possivelSomogyi?' <span title="Possível efeito Somogyi">⚠️</span>':''}</td>
+        <td class="mono g">${celulaGlicemia}</td>
         <td class="mono">${r.insulinaDose ?? '—'}${r.insulinaTipo? ' · '+r.insulinaTipo:''}</td>
-        <td>${r.observacao||''}${r.sinaisClinicos&&r.sinaisClinicos.length? '<br>'+r.sinaisClinicos.map(s=>`<span class="pill hiper" style="margin-top:3px;display:inline-block">${s}</span>`).join(' '):''}</td>
+        <td>${r.observacao||''}${atividadeTxt}${r.sinaisClinicos&&r.sinaisClinicos.length? '<br>'+r.sinaisClinicos.map(s=>`<span class="pill hiper" style="margin-top:3px;display:inline-block">${s}</span>`).join(' '):''}</td>
         <td><button class="rowbtn" onclick="editarRegistro('${r.id}')">editar</button><button class="rowbtn" onclick="excluirRegistro('${r.id}')">excluir</button></td>
       </tr>`;
     }).join('');
     return `<div class="month-block ${idx===0?'open':''}">
       <div class="month-header" onclick="this.parentElement.classList.toggle('open')">
         <h3 style="text-transform:capitalize">${monthLabel(k)}</h3>
-        <div class="month-meta">${list.length} registros · média ${mean(vals).toFixed(0)} mg/dL <span class="chev">▶</span></div>
+        <div class="month-meta">${list.length} registros${vals.length? ' · média '+mean(vals).toFixed(0)+' mg/dL' : ''} <span class="chev">▶</span></div>
       </div>
       <div class="month-body">
         <table><thead><tr><th>Data/hora</th><th>Glicemia</th><th>Insulina</th><th>Obs.</th><th></th></tr></thead>
@@ -1518,10 +1607,16 @@ function calcStatsPeriodo(lista){
 function renderSemanal(){
   const agora = new Date();
   const limite = new Date(agora.getTime() - 7*24*60*60*1000);
-  const lista = registros.filter(r=> new Date(r.dataGlicemia) >= limite).sort((a,b)=> new Date(a.dataGlicemia)-new Date(b.dataGlicemia));
+  const listaCompleta = registros.filter(r=> new Date(r.dataGlicemia) >= limite).sort((a,b)=> new Date(a.dataGlicemia)-new Date(b.dataGlicemia));
+  const lista = listaCompleta.filter(r=>r.glicemia!==null && r.glicemia!==undefined);
   const s = calcStatsPeriodo(lista);
   const el = document.getElementById('semanal-stats');
-  if(!s){ el.innerHTML = '<div class="empty">Sem lançamentos nos últimos 7 dias.</div>'; if(semanalChart){semanalChart.destroy();semanalChart=null;} return; }
+  if(!s){
+    el.innerHTML = '<div class="empty">Sem lançamentos com glicemia nos últimos 7 dias.</div>';
+    if(semanalChart){semanalChart.destroy();semanalChart=null;}
+    renderSinaisObservacoes('semanal-obs', listaCompleta);
+    return;
+  }
   el.innerHTML = `
     <div class="stat"><div class="val">${s.media.toFixed(0)}</div><div class="lbl">média (mg/dL)</div></div>
     <div class="stat"><div class="val">${s.dp.toFixed(1)}</div><div class="lbl">desvio padrão</div></div>
@@ -1545,6 +1640,41 @@ function renderSemanal(){
         tooltip:{ callbacks:{ title:(items)=> fmtDate(lista[items[0].dataIndex].dataGlicemia) } } },
       scales:{ y:{ suggestedMin: configParam.hipo-30, suggestedMax: configParam.hiper+30 }, x:{ ticks:{ autoSkip:true, maxRotation:45 } } } }
   });
+  renderSinaisObservacoes('semanal-obs', listaCompleta);
+}
+
+/* ---------------- SINAIS CLÍNICOS E OBSERVAÇÕES (relatórios) ---------------- */
+function renderSinaisObservacoes(elId, listaCompleta){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const contagem = {};
+  listaCompleta.forEach(r=> (r.sinaisClinicos||[]).forEach(s=> contagem[s] = (contagem[s]||0)+1));
+  const atividades = listaCompleta.filter(r=>r.atividadeFisica);
+  const observacoesLivres = listaCompleta.filter(r=>r.apenasObservacao && r.observacao);
+
+  if(!Object.keys(contagem).length && !atividades.length && !observacoesLivres.length){
+    el.innerHTML = '<div class="empty">Nenhum sinal clínico, atividade física ou observação avulsa neste período.</div>';
+    return;
+  }
+  let html = '';
+  if(Object.keys(contagem).length){
+    html += `<h3>Sinais clínicos observados</h3><div class="btn-row" style="margin-bottom:10px">${
+      Object.entries(contagem).map(([s,n])=>`<span class="pill hiper">${s} (${n}x)</span>`).join('')
+    }</div>`;
+  }
+  if(atividades.length){
+    html += `<h3>Atividade física</h3><ul class="top-episodes">${atividades.map(r=>{
+      const ini = r.atividadeFisica.inicio ? new Date(r.atividadeFisica.inicio).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '?';
+      const fim = r.atividadeFisica.fim ? new Date(r.atividadeFisica.fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+      return `<li><span>${ini}${fim?' – '+fim:''}</span></li>`;
+    }).join('')}</ul>`;
+  }
+  if(observacoesLivres.length){
+    html += `<h3>Observações avulsas (sem glicemia)</h3><ul class="top-episodes">${observacoesLivres.map(r=>
+      `<li><span>${fmtDate(r.dataGlicemia)}</span><span style="max-width:60%;text-align:right">${r.observacao}</span></li>`
+    ).join('')}</ul>`;
+  }
+  el.innerHTML = html;
 }
 
 /* ---------------- RELATÓRIO MENSAL ---------------- */
@@ -1634,14 +1764,15 @@ function renderMensal(){
   const key = document.getElementById('mensal-select').value;
   const content = document.getElementById('mensal-content');
   if(!key){ content.innerHTML = '<div class="empty">Sem dados para relatório.</div>'; return; }
-  const lista = registros.filter(r=>monthKey(r.dataGlicemia)===key).sort((a,b)=>new Date(a.dataGlicemia)-new Date(b.dataGlicemia));
+  const listaCompleta = registros.filter(r=>monthKey(r.dataGlicemia)===key).sort((a,b)=>new Date(a.dataGlicemia)-new Date(b.dataGlicemia));
+  const lista = listaCompleta.filter(r=>r.glicemia!==null && r.glicemia!==undefined);
   const s = calcStatsPeriodo(lista);
 
   // mês anterior p/ comparação
   const [y,m] = key.split('-').map(Number);
   const prevDate = new Date(y, m-2, 1);
   const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}`;
-  const listaPrev = registros.filter(r=>monthKey(r.dataGlicemia)===prevKey);
+  const listaPrev = registros.filter(r=>monthKey(r.dataGlicemia)===prevKey && r.glicemia!==null && r.glicemia!==undefined);
   const sPrev = calcStatsPeriodo(listaPrev);
 
   // CV
@@ -1669,7 +1800,11 @@ function renderMensal(){
   // efeito Somogyi: reaproveita a marcação já feita no momento do lançamento
   const episodiosSomogyi = lista.filter(r=>r.possivelSomogyi);
 
-  if(!s){ content.innerHTML = '<div class="empty">Sem lançamentos neste mês.</div>'; return; }
+  if(!s){
+    content.innerHTML = `<div class="empty">Sem lançamentos com glicemia neste mês.</div><div id="mensal-obs" style="margin-top:14px"></div>`;
+    renderSinaisObservacoes('mensal-obs', listaCompleta);
+    return;
+  }
 
   // dose por kg (UI/kg) — usa o peso registrado na data de cada lançamento com insulina
   const doseKgLista = lista.filter(r=>r.insulinaDose).map(r=>{
@@ -1731,11 +1866,15 @@ function renderMensal(){
       <ul class="top-episodes">${episodiosSomogyi.map(r=>`<li><span>${fmtDate(r.dataGlicemia)}</span><span class="mono" style="color:var(--accent)">${r.glicemia} mg/dL (rebote)</span></li>`).join('')}</ul>
     ` : `<div class="notice">O app monitora automaticamente esse padrão a cada lançamento. Nenhum episódio identificado neste mês.</div>`}
 
+    <h3>Sinais clínicos, atividade física e observações avulsas</h3>
+    <div id="mensal-obs"></div>
+
     <h3>Observações da veterinária</h3>
     <div id="obs-vet-lista"><div class="empty">Nenhuma observação registrada ainda.</div></div>
     <textarea id="obs-vet" placeholder="Nova observação sobre este mês..."></textarea>
     <div class="btn-row"><button class="btn secondary" onclick="adicionarObsVet('${key}')">Adicionar observação</button></div>
   `;
+  renderSinaisObservacoes('mensal-obs', listaCompleta);
 
   // carregar observações salvas (lista com data/hora, com migração do formato antigo de texto único)
   db.collection('relatoriosMensais').doc(key).get().then(doc=>{
@@ -1770,7 +1909,7 @@ function renderMensal(){
   });
 
   // guarda tudo que o relatório em PDF vai precisar, sem recalcular
-  window._mensalReportData = { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia };
+  window._mensalReportData = { key, lista, listaCompleta, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia };
 }
 function renderObsVetLista(key){
   const el = document.getElementById('obs-vet-lista');
@@ -1817,7 +1956,7 @@ async function adicionarObsVet(key){
 async function exportarPDF(){
   const d = window._mensalReportData;
   if(!d){ await customAlert('Abra o relatório mensal antes de exportar.'); return; }
-  const { key, lista, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia } = d;
+  const { key, lista, listaCompleta, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia } = d;
   const docObs = await db.collection('relatoriosMensais').doc(key).get();
   const obs = (docObs.exists && docObs.data().observacoes) || [];
 
@@ -1984,6 +2123,30 @@ async function exportarPDF(){
     paragrafo('O app monitora automaticamente esse padrão a cada lançamento. Nenhum episódio identificado neste mês.');
   }
 
+  // ---------- SINAIS CLÍNICOS, ATIVIDADE FÍSICA E OBSERVAÇÕES AVULSAS ----------
+  secao('Sinais clínicos, atividade física e observações avulsas');
+  const contagemSinaisPdf = {};
+  listaCompleta.forEach(r=> (r.sinaisClinicos||[]).forEach(sVal=> contagemSinaisPdf[sVal] = (contagemSinaisPdf[sVal]||0)+1));
+  const atividadesPdf = listaCompleta.filter(r=>r.atividadeFisica);
+  const obsAvulsasPdf = listaCompleta.filter(r=>r.apenasObservacao && r.observacao);
+  if(Object.keys(contagemSinaisPdf).length){
+    tabela([['Sinal clínico','Ocorrências'], ...Object.entries(contagemSinaisPdf).map(([sVal,n])=>[sVal, String(n)])], [CONTENT_W-140,140]);
+  }
+  if(atividadesPdf.length){
+    paragrafo('Atividade física registrada:', 10);
+    tabela([['Início','Término'], ...atividadesPdf.map(r=>[
+      r.atividadeFisica.inicio? new Date(r.atividadeFisica.inicio).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '?',
+      r.atividadeFisica.fim? new Date(r.atividadeFisica.fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '—'
+    ])], [CONTENT_W/2, CONTENT_W/2]);
+  }
+  if(obsAvulsasPdf.length){
+    paragrafo('Observações avulsas (sem glicemia):', 10);
+    tabela([['Data/hora','Observação'], ...obsAvulsasPdf.map(r=>[fmtDate(r.dataGlicemia), r.observacao])], [110, CONTENT_W-110]);
+  }
+  if(!Object.keys(contagemSinaisPdf).length && !atividadesPdf.length && !obsAvulsasPdf.length){
+    paragrafo('Nenhum sinal clínico, atividade física ou observação avulsa neste mês.');
+  }
+
   // ---------- PIORES EPISÓDIOS ----------
   secao('Piores episódios do mês');
   if(topHipo.length){
@@ -1998,8 +2161,8 @@ async function exportarPDF(){
 
   // ---------- TODOS OS LANÇAMENTOS DO MÊS ----------
   secao('Todos os lançamentos do mês');
-  const linhasLanc = lista.map(r=>[
-    fmtDate(r.dataGlicemia), `${r.glicemia} mg/dL`, r.insulinaDose?`${r.insulinaDose} UI ${r.insulinaTipo||''}`:'—', r.observacao||''
+  const linhasLanc = listaCompleta.map(r=>[
+    fmtDate(r.dataGlicemia), r.glicemia!==null?`${r.glicemia} mg/dL`:'— (observação)', r.insulinaDose?`${r.insulinaDose} UI ${r.insulinaTipo||''}`:'—', r.observacao||''
   ]);
   tabela([['Data/hora','Glicemia','Insulina','Observação'], ...linhasLanc], [110, 80, 130, CONTENT_W-320]);
 
