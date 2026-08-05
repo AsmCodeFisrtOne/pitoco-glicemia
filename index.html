@@ -622,7 +622,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev003.1"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev003.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -2018,7 +2018,13 @@ async function exportarPDF(){
   }
 
   rodape();
-  pdf.save(`pitoco-relatorio-${key}.pdf`);
+  const contadorPdf = (()=>{
+    const chave = 'pitoco_pdf_contador_'+key;
+    const n = parseInt(localStorage.getItem(chave) || '0', 10) + 1;
+    localStorage.setItem(chave, String(n));
+    return n;
+  })();
+  pdf.save(`pitoco-relatorio-${key}-${String(contadorPdf).padStart(2,'0')}.pdf`);
   } finally {
     if(btnExport){ btnExport.textContent = textoOriginal; btnExport.disabled = false; }
   }
