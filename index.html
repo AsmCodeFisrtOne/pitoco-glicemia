@@ -469,6 +469,12 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
         A ficha do Pitoco e as configurações não são afetadas. <strong>Não há como desfazer esta ação.</strong>
       </p>
       <button class="btn danger" onclick="apagarTudoFluxo()">Apagar todos os registros</button>
+      <hr style="border:none;border-top:1px solid var(--line);margin:18px 0">
+      <p style="font-size:13px;color:var(--muted);margin-top:0">
+        Apaga permanentemente todas as observações da veterinária salvas em todos os meses do Relatório mensal.
+        Registros de glicemia e curvas não são afetados. <strong>Não há como desfazer esta ação.</strong>
+      </p>
+      <button class="btn danger" onclick="apagarObsVetFluxo()">Apagar todas as observações da veterinária</button>
     </div>
   </section>
 
@@ -616,7 +622,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev002.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev003.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -961,6 +967,33 @@ async function apagarTudo(){
       await lote.commit();
     }
     await customAlert(`Concluído: ${regSnap.size} lançamento(s) e ${curvSnap.size} curva(s) apagados.`, 'Concluído', '✅');
+  }catch(err){
+    await customAlert('Erro ao apagar: '+err.message);
+  }
+}
+async function apagarObsVetFluxo(){
+  const senha = await customPrompt('Para apagar TODAS as observações da veterinária, digite a senha de acesso:', 'Confirmar exclusão', 'password');
+  if(senha === null) return;
+  if(senha !== senhaAcesso){
+    await customAlert('Senha incorreta. Nada foi apagado.');
+    return;
+  }
+  const confirmacao = await customPrompt('Ação irreversível. Digite APAGAR (em maiúsculas) para confirmar:', 'Confirmar exclusão');
+  if(confirmacao === null) return;
+  if(confirmacao !== 'APAGAR'){
+    await customAlert('Confirmação não corresponde a "APAGAR". Nada foi apagado.');
+    return;
+  }
+  try{
+    const snap = await db.collection('relatoriosMensais').get();
+    const refs = snap.docs.map(d=> db.collection('relatoriosMensais').doc(d.id));
+    for(let i=0; i<refs.length; i+=400){
+      const lote = db.batch();
+      refs.slice(i, i+400).forEach(ref=> lote.delete(ref));
+      await lote.commit();
+    }
+    window._obsVetCache = {};
+    await customAlert(`Concluído: observações de ${snap.size} mês(es) apagadas.`, 'Concluído', '✅');
   }catch(err){
     await customAlert('Erro ao apagar: '+err.message);
   }
@@ -1744,11 +1777,25 @@ function renderObsVetLista(key){
   if(!el) return;
   const obs = (window._obsVetCache && window._obsVetCache[key]) || [];
   if(!obs.length){ el.innerHTML = '<div class="empty">Nenhuma observação registrada ainda.</div>'; return; }
-  el.innerHTML = [...obs].reverse().map(o=>`
+  el.innerHTML = [...obs].reverse().map((o, idxReverso)=>{
+    const idxReal = obs.length - 1 - idxReverso;
+    return `
     <div style="padding:10px 0;border-bottom:1px solid var(--line)">
-      <div style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:3px">${fmtDate(o.data)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+        <div style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:3px">${fmtDate(o.data)}</div>
+        <button class="rowbtn" onclick="excluirObsVet('${key}', ${idxReal})">excluir</button>
+      </div>
       <div style="font-size:13.5px;white-space:pre-line">${o.texto}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+async function excluirObsVet(key, idx){
+  if(!(await customConfirm('Excluir esta observação?'))) return;
+  const atuais = (window._obsVetCache && window._obsVetCache[key]) || [];
+  const novaLista = atuais.filter((_,i)=> i!==idx);
+  await db.collection('relatoriosMensais').doc(key).set({observacoes: novaLista}, {merge:true});
+  window._obsVetCache[key] = novaLista;
+  renderObsVetLista(key);
 }
 async function adicionarObsVet(key){
   const ta = document.getElementById('obs-vet');
