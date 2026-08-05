@@ -95,7 +95,7 @@ textarea{resize:vertical;min-height:56px;}
   var(--danger) 0%, var(--danger) 20%, var(--accent-tint) 20%, var(--accent-tint) 33%,
   var(--target) 33%, var(--target) 62%, var(--accent-tint) 62%, var(--accent-tint) 75%, var(--accent) 75%, var(--accent) 100%);
   margin:34px 0 6px;}
-.gauge .marker{position:absolute;top:-6px;width:3px;height:46px;background:var(--ink);border-radius:2px;transform:translateX(-50%);}
+.gauge .marker{position:absolute;top:-6px;width:8px;height:46px;background:var(--ink);border-radius:3px;transform:translateX(-50%);}
 .gauge .marker::after{content:attr(data-val);position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
 .gauge-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:18px;}
 
@@ -656,7 +656,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev003.4"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev003.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
