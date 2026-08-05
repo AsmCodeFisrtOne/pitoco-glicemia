@@ -656,7 +656,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev003.3"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev003.4"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1651,6 +1651,7 @@ function renderSinaisObservacoes(elId, listaCompleta){
   listaCompleta.forEach(r=> (r.sinaisClinicos||[]).forEach(s=> contagem[s] = (contagem[s]||0)+1));
   const atividades = listaCompleta.filter(r=>r.atividadeFisica);
   const observacoesLivres = listaCompleta.filter(r=>r.apenasObservacao && r.observacao);
+  const comSinais = listaCompleta.filter(r=> r.sinaisClinicos && r.sinaisClinicos.length);
 
   if(!Object.keys(contagem).length && !atividades.length && !observacoesLivres.length){
     el.innerHTML = '<div class="empty">Nenhum sinal clínico, atividade física ou observação avulsa neste período.</div>';
@@ -1658,9 +1659,14 @@ function renderSinaisObservacoes(elId, listaCompleta){
   }
   let html = '';
   if(Object.keys(contagem).length){
-    html += `<h3>Sinais clínicos observados</h3><div class="btn-row" style="margin-bottom:10px">${
+    html += `<h3>Sinais clínicos — resumo por frequência</h3><div class="btn-row" style="margin-bottom:10px">${
       Object.entries(contagem).map(([s,n])=>`<span class="pill hiper">${s} (${n}x)</span>`).join('')
-    }</div>`;
+    }</div>
+    <h3>Sinais clínicos — quando ocorreram</h3>
+    <ul class="top-episodes">${comSinais.map(r=>{
+      const contexto = (r.glicemia!==null && r.glicemia!==undefined) ? `${r.glicemia} mg/dL` : '📝 sem glicemia';
+      return `<li><span>${fmtDate(r.dataGlicemia)} (${contexto})</span><span style="max-width:55%;text-align:right">${r.sinaisClinicos.join(', ')}</span></li>`;
+    }).join('')}</ul>`;
   }
   if(atividades.length){
     html += `<h3>Atividade física</h3><ul class="top-episodes">${atividades.map(r=>{
@@ -2127,10 +2133,18 @@ async function exportarPDF(){
   secao('Sinais clínicos, atividade física e observações avulsas');
   const contagemSinaisPdf = {};
   listaCompleta.forEach(r=> (r.sinaisClinicos||[]).forEach(sVal=> contagemSinaisPdf[sVal] = (contagemSinaisPdf[sVal]||0)+1));
+  const comSinaisPdf = listaCompleta.filter(r=> r.sinaisClinicos && r.sinaisClinicos.length);
   const atividadesPdf = listaCompleta.filter(r=>r.atividadeFisica);
   const obsAvulsasPdf = listaCompleta.filter(r=>r.apenasObservacao && r.observacao);
   if(Object.keys(contagemSinaisPdf).length){
+    paragrafo('Resumo por frequência:', 10);
     tabela([['Sinal clínico','Ocorrências'], ...Object.entries(contagemSinaisPdf).map(([sVal,n])=>[sVal, String(n)])], [CONTENT_W-140,140]);
+    paragrafo('Quando ocorreram:', 10);
+    tabela([['Data/hora','Contexto','Sinais'], ...comSinaisPdf.map(r=>[
+      fmtDate(r.dataGlicemia),
+      (r.glicemia!==null && r.glicemia!==undefined) ? `${r.glicemia} mg/dL` : 'sem glicemia',
+      r.sinaisClinicos.join(', ')
+    ])], [110, 90, CONTENT_W-200]);
   }
   if(atividadesPdf.length){
     paragrafo('Atividade física registrada:', 10);
