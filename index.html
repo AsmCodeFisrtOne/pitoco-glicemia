@@ -622,7 +622,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev003.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev003.1"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1887,21 +1887,34 @@ async function exportarPDF(){
     y += linhas.length*(tamanho+3) + 4;
   }
   function tabela(linhas, colWidths){
-    const rowH = 20;
-    garantirEspaco(rowH*(linhas.length+1));
+    const rowHMin = 20;
+    const padding = 6;
+    function linhasTexto(texto, largura){
+      return pdf.splitTextToSize(String(texto), Math.max(20, largura - padding*2));
+    }
+    garantirEspaco(rowHMin);
     let x = MARGIN;
     pdf.setFillColor(...COR_PRIMARIA);
-    pdf.rect(MARGIN, y, CONTENT_W, rowH, 'F');
+    pdf.rect(MARGIN, y, CONTENT_W, rowHMin, 'F');
     pdf.setTextColor(255,255,255); pdf.setFont(undefined,'bold'); pdf.setFontSize(9.5);
-    linhas[0].forEach((c,i)=>{ pdf.text(String(c), x+6, y+14); x += colWidths[i]; });
-    y += rowH;
+    linhas[0].forEach((c,i)=>{ pdf.text(String(c), x+padding, y+14); x += colWidths[i]; });
+    y += rowHMin;
+
     for(let r=1; r<linhas.length; r++){
-      garantirEspaco(rowH);
-      if(r%2===0){ pdf.setFillColor(244,247,246); pdf.rect(MARGIN, y, CONTENT_W, rowH, 'F'); }
+      // quebra o texto de cada célula na largura da coluna, e usa a maior quantidade de linhas
+      // pra definir a altura real dessa linha da tabela — evita texto longo ficando cortado
+      const linhasPorCelula = linhas[r].map((c,i)=> linhasTexto(c, colWidths[i]));
+      const maxLinhasTexto = Math.max(...linhasPorCelula.map(l=>l.length), 1);
+      const alturaLinha = Math.max(rowHMin, maxLinhasTexto*11 + 9);
+      garantirEspaco(alturaLinha);
+      if(r%2===0){ pdf.setFillColor(244,247,246); pdf.rect(MARGIN, y, CONTENT_W, alturaLinha, 'F'); }
       x = MARGIN;
       pdf.setTextColor(...COR_INK); pdf.setFont(undefined,'normal'); pdf.setFontSize(9.5);
-      linhas[r].forEach((c,i)=>{ pdf.text(String(c), x+6, y+14); x += colWidths[i]; });
-      y += rowH;
+      linhas[r].forEach((c,i)=>{
+        pdf.text(linhasPorCelula[i], x+padding, y+14);
+        x += colWidths[i];
+      });
+      y += alturaLinha;
     }
     y += 10;
   }
@@ -1986,7 +1999,7 @@ async function exportarPDF(){
   // ---------- TODOS OS LANÇAMENTOS DO MÊS ----------
   secao('Todos os lançamentos do mês');
   const linhasLanc = lista.map(r=>[
-    fmtDate(r.dataGlicemia), `${r.glicemia} mg/dL`, r.insulinaDose?`${r.insulinaDose} UI ${r.insulinaTipo||''}`:'—', (r.observacao||'').slice(0,40)
+    fmtDate(r.dataGlicemia), `${r.glicemia} mg/dL`, r.insulinaDose?`${r.insulinaDose} UI ${r.insulinaTipo||''}`:'—', r.observacao||''
   ]);
   tabela([['Data/hora','Glicemia','Insulina','Observação'], ...linhasLanc], [110, 80, 130, CONTENT_W-320]);
 
