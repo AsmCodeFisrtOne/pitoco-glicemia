@@ -662,6 +662,8 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
           <tr><td>Lembrete de curva atrasada</td><td>Se já passaram 14 dias ou mais desde a última curva glicêmica completa, a aba "Curva glicêmica" mostra um aviso sugerindo fazer uma nova em breve.</td></tr>
           <tr><td>Local de aplicação e rodízio</td><td>Campo opcional em "Mais detalhes" pra marcar onde a insulina foi aplicada (pescoço, lombo, coxa — cada lado). O app lembra o último local usado e sugere o próximo na rotação, ajudando a evitar aplicar sempre no mesmo lugar (o que pode endurecer o tecido e atrapalhar a absorção da insulina).</td></tr>
           <tr><td>Retorno ao basal (na curva)</td><td>No resultado de cada curva glicêmica, compara a glicemia inicial (antes da insulina) com a última leitura registrada. Se a última leitura já está perto do valor inicial, sugere que o efeito da insulina está acabando na hora certa; se ainda está bem baixa, pode indicar que o efeito ainda está ativo perto da próxima dose.</td></tr>
+          <tr><td>MAGE (variabilidade glicêmica)</td><td>Mede o tamanho médio das oscilações relevantes de glicemia no mês (maiores que 1 desvio padrão), com gráfico mostrando os pontos de virada usados no cálculo — igual ferramentas clínicas de referência (MAGECAA, iglu). É consagrado em diabetes humano, mas ainda é abordagem de pesquisa em cães, sem valor de corte oficial validado — use como comparação mês a mês, não como número isolado.</td></tr>
+          <tr><td>Correlação dose × glicemia</td><td>Vai de -1 a 1. Valores bem negativos indicam que doses maiores realmente resultam em glicemias mais baixas; perto de 0 sugere que outros fatores (alimentação, estresse, atividade física) influenciam tanto quanto a insulina.</td></tr>
         </tbody>
       </table>
       <div class="notice">Esses recursos são apoios de leitura dos dados, não diagnósticos — servem para levar padrões observados para a conversa com a veterinária, não para substituir a avaliação clínica dela.</div>
@@ -686,7 +688,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.6"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev004.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1845,8 +1847,8 @@ function populateMesSelect(){
 function _datasetsFaixaAlvo(qtdPontos){
   // banda sombreada representando a faixa alvo — reaproveitada em todos os gráficos de glicemia
   return [
-    { label:'Alvo (máx)', data: Array(qtdPontos).fill(configParam.alvoMax), borderColor:'transparent', backgroundColor:'rgba(76,154,106,0.10)', fill:'+1', pointRadius:0, pointHitRadius:0, order:-10, tension:0 },
-    { label:'Alvo (mín)', data: Array(qtdPontos).fill(configParam.alvoMin), borderColor:'transparent', backgroundColor:'rgba(76,154,106,0.10)', fill:false, pointRadius:0, pointHitRadius:0, order:-10, tension:0 }
+    { label:'Alvo (máx)', data: Array(qtdPontos).fill(configParam.alvoMax), borderColor:'rgba(76,154,106,0.6)', borderWidth:1, borderDash:[4,3], backgroundColor:'rgba(76,154,106,0.22)', fill:'+1', pointRadius:0, pointHitRadius:0, order:-10, tension:0 },
+    { label:'Alvo (mín)', data: Array(qtdPontos).fill(configParam.alvoMin), borderColor:'rgba(76,154,106,0.6)', borderWidth:1, borderDash:[4,3], backgroundColor:'rgba(76,154,106,0.22)', fill:false, pointRadius:0, pointHitRadius:0, order:-10, tension:0 }
   ];
 }
 function agregarPorDia(lista){
@@ -2053,6 +2055,7 @@ function renderMensal(){
     </div>
     <div class="notice">${tendencia}${sPrev? ` (mês anterior: ${sPrev.media.toFixed(0)} mg/dL)`:''}</div>
     <div class="notice" style="background:var(--primary-tint)"><strong>MAGE</strong> (Mean Amplitude of Glycemic Excursions) mede a variabilidade glicêmica considerando só as oscilações relevantes (maiores que 1 desvio padrão) — quanto menor, mais estável o controle. <strong>Correlação dose × glicemia</strong> vai de -1 a 1: valores bem negativos indicam que doses maiores realmente resultam em glicemias mais baixas; perto de 0 sugere que outros fatores (alimentação, estresse, atividade física) estão influenciando tanto quanto a insulina.</div>
+    <div class="notice" style="background:var(--accent-tint);color:#8a5c14">MAGE é uma métrica consagrada em diabetes humano, mas ainda é uma abordagem de pesquisa em cães — não existe um valor de corte oficial validado pra veterinária. Use-o mais como comparação mês a mês (subindo ou descendo) do que como um número isolado a ser julgado sozinho.</div>
     <div class="chart-wrap"><canvas id="chart-mage" height="220"></canvas></div>
 
     <div class="two-col">
@@ -2345,6 +2348,7 @@ async function exportarPDF(){
   ], [280, CONTENT_W-280]);
   paragrafo(`Tendência: ${tendencia.replace('▲','sobiu').replace('▼','caiu').replace('=','estável')}${sPrev? ` (média do mês anterior: ${sPrev.media.toFixed(0)} mg/dL)`:''}.`);
   paragrafo('MAGE (Mean Amplitude of Glycemic Excursions) mede a variabilidade glicêmica considerando só as oscilações relevantes (maiores que 1 desvio padrão) — quanto menor, mais estável o controle. Correlação dose × glicemia vai de -1 a 1: valores bem negativos indicam que doses maiores realmente resultam em glicemias mais baixas; perto de 0 sugere que outros fatores (alimentação, estresse, atividade física) estão influenciando tanto quanto a insulina.');
+  paragrafo('MAGE é uma métrica consagrada em diabetes humano, mas ainda é uma abordagem de pesquisa em cães — não existe um valor de corte oficial validado pra veterinária. Use-o mais como comparação mês a mês (subindo ou descendo) do que como um número isolado a ser julgado sozinho.');
 
   // ---------- GRÁFICOS ----------
   secao('Evolução da glicemia no mês');
