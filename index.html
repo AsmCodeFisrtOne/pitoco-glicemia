@@ -16,6 +16,7 @@
 
 <!-- PDF export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
@@ -146,7 +147,8 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
 .top-episodes li:last-child{border-bottom:none;}
 .badge-complete{font-size:12px;color:var(--muted);}
 .notice{background:var(--primary-tint);color:var(--primary-dark);font-size:12.5px;padding:10px 12px;border-radius:9px;margin-bottom:14px;}
-.month-select-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;}
+.month-select-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.month-select-row select{width:auto;flex:1 1 140px;min-width:120px;}
 
 /* campo expansível "mais detalhes" */
 details.more-details{margin-bottom:12px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;}
@@ -675,7 +677,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev004.3"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -2247,11 +2249,6 @@ async function exportarPDF(){
 }
 
 /* ---------------- EXPORTAR PLANILHA (CSV) ---------------- */
-function _csvEscape(valor){
-  const texto = valor===null || valor===undefined ? '' : String(valor);
-  if(/[",;\n]/.test(texto)) return '"' + texto.replace(/"/g,'""') + '"';
-  return texto;
-}
 function exportarPlanilha(){
   const d = window._mensalReportData;
   if(!d){ customAlert('Abra o relatório mensal antes de exportar.'); return; }
@@ -2261,7 +2258,7 @@ function exportarPlanilha(){
   const linhas = listaCompleta.map(r=>[
     fmtDate(r.dataGlicemia),
     r.apenasObservacao ? 'Observação (sem glicemia)' : 'Glicemia',
-    r.glicemia!==null && r.glicemia!==undefined ? r.glicemia : '',
+    r.glicemia!==null && r.glicemia!==undefined ? r.glicemia : '', // número de verdade, não texto
     r.insulinaDose ?? '',
     r.insulinaTipo || '',
     r.localAplicacao || '',
@@ -2272,8 +2269,12 @@ function exportarPlanilha(){
     r.possivelSomogyi ? 'Sim' : ''
   ]);
 
-  const linhasCsv = [cabecalho, ...linhas].map(linha=> linha.map(_csvEscape).join(';')).join('\r\n');
-  const csvComBom = '\uFEFF' + linhasCsv; // BOM ajuda o Excel a reconhecer acentuação em UTF-8
+  const planilha = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
+  planilha['!cols'] = [
+    {wch:16},{wch:22},{wch:14},{wch:14},{wch:14},{wch:16},{wch:22},{wch:20},{wch:12},{wch:30},{wch:14}
+  ];
+  const livro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(livro, planilha, monthLabel(key).slice(0,31));
 
   const contadorPlanilha = (()=>{
     const chave = 'pitoco_planilha_contador_'+key;
@@ -2282,15 +2283,7 @@ function exportarPlanilha(){
     return n;
   })();
 
-  const blob = new Blob([csvComBom], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `pitoco-lancamentos-${key}-${String(contadorPlanilha).padStart(2,'0')}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  XLSX.writeFile(livro, `pitoco-lancamentos-${key}-${String(contadorPlanilha).padStart(2,'0')}.xlsx`);
 }
 
 /* ---------------- FICHA DO PITOCO ---------------- */
