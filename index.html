@@ -686,7 +686,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev004.6"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1236,7 +1236,7 @@ function renderCurvaTab(){
       curvaChartLive = new Chart(ctx, {
         type:'line',
         data:{ labels: stats.pontos.map(p=>new Date(p.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})),
-          datasets:[{ label:'Glicemia', data: stats.pontos.map(p=>p.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.3, pointRadius:4 }] },
+          datasets:[..._datasetsFaixaAlvo(stats.pontos.length), { label:'Glicemia', data: stats.pontos.map(p=>p.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.3, pointRadius:4 }] },
         options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
       });
     }
@@ -1340,9 +1340,10 @@ function mostrarResultadoCurva(id){
     type:'line',
     data:{ labels: stats.pontos.map(p=>new Date(p.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})),
       datasets:[
+        ..._datasetsFaixaAlvo(stats.pontos.length),
         { label:'Medido', data: stats.pontos.map(p=>p.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.08)', fill:true, tension:0.35, pointRadius:4 }
       ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}}}} }
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}, filter:(item)=>!item.text.startsWith('Alvo')}}} }
   });
 }
 
@@ -1687,25 +1688,34 @@ function renderMonths(){
 }
 
 /* ---------------- RELATÓRIO SEMANAL ---------------- */
+function calcularMAGEDetalhado(listaOrdenada){
+  // versão detalhada: retorna também QUAIS pontos de virada entraram no cálculo,
+  // pra poder desenhar no gráfico igual as ferramentas clínicas de referência (MAGECAA, iglu)
+  if(listaOrdenada.length < 3) return { mage:null, excursoesValidas:[] };
+  const valores = listaOrdenada.map(r=>r.glicemia);
+  const sd = stdev(valores);
+  const indicesVirada = [0];
+  for(let i=1; i<valores.length-1; i++){
+    const prev=valores[i-1], cur=valores[i], next=valores[i+1];
+    if((cur-prev>0 && next-cur<0) || (cur-prev<0 && next-cur>0)) indicesVirada.push(i);
+  }
+  indicesVirada.push(valores.length-1);
+  const excursoesValidas = [];
+  for(let i=1; i<indicesVirada.length; i++){
+    const iA = indicesVirada[i-1], iB = indicesVirada[i];
+    const delta = Math.abs(valores[iB]-valores[iA]);
+    if(delta > sd){
+      excursoesValidas.push({ iA, iB, valA:valores[iA], valB:valores[iB], horarioA:listaOrdenada[iA].dataGlicemia, horarioB:listaOrdenada[iB].dataGlicemia, delta });
+    }
+  }
+  const mage = excursoesValidas.length ? mean(excursoesValidas.map(e=>e.delta)) : 0;
+  return { mage, excursoesValidas };
+}
 function calcularMAGE(valoresOrdenados){
   // Mean Amplitude of Glycemic Excursions — métrica padrão de variabilidade glicêmica
+  // (mantido como wrapper simples — só o número — usado no cálculo geral de estatísticas)
   if(valoresOrdenados.length < 3) return null;
-  const media = mean(valoresOrdenados);
-  const sd = stdev(valoresOrdenados);
-  // identifica pontos de virada (picos e vales) na série cronológica
-  const pontosVirada = [valoresOrdenados[0]];
-  for(let i=1; i<valoresOrdenados.length-1; i++){
-    const prev = valoresOrdenados[i-1], cur = valoresOrdenados[i], next = valoresOrdenados[i+1];
-    if((cur-prev>0 && next-cur<0) || (cur-prev<0 && next-cur>0)) pontosVirada.push(cur);
-  }
-  pontosVirada.push(valoresOrdenados[valoresOrdenados.length-1]);
-  // só conta excursões entre pontos de virada consecutivos maiores que 1 desvio padrão
-  const excursoes = [];
-  for(let i=1; i<pontosVirada.length; i++){
-    const delta = Math.abs(pontosVirada[i]-pontosVirada[i-1]);
-    if(delta > sd) excursoes.push(delta);
-  }
-  return excursoes.length ? mean(excursoes) : 0;
+  return calcularMAGEDetalhado(valoresOrdenados.map(v=>({glicemia:v, dataGlicemia:null}))).mage;
 }
 function calcularCorrelacao(pares){
   // coeficiente de correlação de Pearson entre dose de insulina e glicemia resultante
@@ -1768,13 +1778,15 @@ function renderSemanal(){
   if(semanalChart) semanalChart.destroy();
   semanalChart = new Chart(ctx, {
     type:'line',
-    data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[{
+    data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[
+      ..._datasetsFaixaAlvo(lista.length),
+      {
       label:'Glicemia (mg/dL)', data: lista.map(r=>r.glicemia),
       borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.25, pointRadius:3, pointHitRadius:12
     }]},
     options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
       plugins:{legend:{display:false},
-        tooltip:{ callbacks:{ title:(items)=> fmtDate(lista[items[0].dataIndex].dataGlicemia) } } },
+        tooltip:{ callbacks:{ title:(items)=> fmtDate(lista[items[0].dataIndex].dataGlicemia) }, filter:(item)=> !item.dataset.label.startsWith('Alvo') } },
       scales:{ y:{ suggestedMin: configParam.hipo-30, suggestedMax: configParam.hiper+30 }, x:{ ticks:{ autoSkip:true, maxRotation:45 } } } }
   });
   renderSinaisObservacoes('semanal-obs', listaCompleta);
@@ -1830,6 +1842,13 @@ function populateMesSelect(){
   sel.innerHTML = keys.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join('') || '<option value="">—</option>';
   if(keys.includes(atual)) sel.value = atual;
 }
+function _datasetsFaixaAlvo(qtdPontos){
+  // banda sombreada representando a faixa alvo — reaproveitada em todos os gráficos de glicemia
+  return [
+    { label:'Alvo (máx)', data: Array(qtdPontos).fill(configParam.alvoMax), borderColor:'transparent', backgroundColor:'rgba(76,154,106,0.10)', fill:'+1', pointRadius:0, pointHitRadius:0, order:-10, tension:0 },
+    { label:'Alvo (mín)', data: Array(qtdPontos).fill(configParam.alvoMin), borderColor:'transparent', backgroundColor:'rgba(76,154,106,0.10)', fill:false, pointRadius:0, pointHitRadius:0, order:-10, tension:0 }
+  ];
+}
 function agregarPorDia(lista){
   const porDia = {};
   lista.forEach(r=>{
@@ -1866,14 +1885,15 @@ function renderChartMensalLinha(modo){
     mensalChart1 = new Chart(ctx1, {
       type:'line',
       data:{ labels: dias.map(d=>d.label), datasets:[
+        ..._datasetsFaixaAlvo(dias.length),
         { label:'Média do dia', data: dias.map(d=>d.media), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:false, tension:0.2, pointRadius:3, pointHitRadius:12 },
         { label:'Máximo do dia', data: dias.map(d=>d.max), borderColor:'rgba(232,163,61,0.5)', borderDash:[4,4], pointRadius:0, fill:'+1' },
         { label:'Mínimo do dia', data: dias.map(d=>d.min), borderColor:'rgba(76,154,106,0.5)', borderDash:[4,4], pointRadius:0, fill:false },
         { label:'Tendência', data: tendencia, borderColor:'#C1533D', borderWidth:2, borderDash:[8,4], pointRadius:0, fill:false, tension:0 }
       ]},
       options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
-        plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}}}, title:{display:true,text:'Média diária (faixa mín–máx sombreada) + tendência'},
-          tooltip:{ callbacks:{ afterTitle:(items)=>{ const d = dias[items[0].dataIndex]; return `${d.n} leitura(s) neste dia`; } } } },
+        plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}, filter:(item)=>!item.text.startsWith('Alvo')}}, title:{display:true,text:'Média diária (faixa mín–máx sombreada) + tendência'},
+          tooltip:{ callbacks:{ afterTitle:(items)=>{ const d = dias[items[0].dataIndex]; return `${d.n} leitura(s) neste dia`; } }, filter:(item)=> !item.dataset.label.startsWith('Alvo') } },
         scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
     });
   } else {
@@ -1881,13 +1901,14 @@ function renderChartMensalLinha(modo){
     mensalChart1 = new Chart(ctx1, {
       type:'line',
       data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[
+        ..._datasetsFaixaAlvo(lista.length),
         { label:'Glicemia', data: lista.map(r=>r.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.2, pointRadius:2, pointHitRadius:12 },
         { label:'Tendência', data: tendencia, borderColor:'#C1533D', borderWidth:2, borderDash:[8,4], pointRadius:0, fill:false, tension:0 }
       ]},
       options:{ responsive:true, maintainAspectRatio:false,
         interaction:{ mode:'index', intersect:false },
-        plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}}}, title:{display:true,text:'Glicemia ao longo do mês (cada leitura) + tendência'},
-        tooltip:{ callbacks:{ title: (items)=> new Date(lista[items[0].dataIndex].dataGlicemia).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) } } },
+        plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}, filter:(item)=>!item.text.startsWith('Alvo')}}, title:{display:true,text:'Glicemia ao longo do mês (cada leitura) + tendência'},
+        tooltip:{ callbacks:{ title: (items)=> new Date(lista[items[0].dataIndex].dataGlicemia).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) }, filter:(item)=> !item.dataset.label.startsWith('Alvo') } },
         scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
     });
   }
@@ -1904,6 +1925,36 @@ function atualizarBotoesChartView(){
   if(!bd || !bb) return;
   bd.classList.toggle('secondary', modo!=='diario');
   bb.classList.toggle('secondary', modo!=='bruto');
+}
+function renderGraficoMAGE(canvasId, listaOrdenavel){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return null;
+  const ordenada = [...listaOrdenavel].sort((a,b)=> new Date(a.dataGlicemia)-new Date(b.dataGlicemia));
+  if(ordenada.length < 3) return null;
+  const det = calcularMAGEDetalhado(ordenada);
+  const labels = ordenada.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR'));
+  const datasetsExcursoes = det.excursoesValidas.map((exc,i)=>({
+    label: i===0 ? 'Excursão usada no MAGE' : '',
+    data: ordenada.map((_,idx)=> idx===exc.iA ? exc.valA : idx===exc.iB ? exc.valB : null),
+    borderColor:'#C1533D', borderWidth:2, spanGaps:true, fill:false, tension:0,
+    pointRadius:(ctxp)=> (ctxp.dataIndex===exc.iA || ctxp.dataIndex===exc.iB) ? 5 : 0,
+    pointBackgroundColor:'#C1533D', order:5
+  }));
+  const existente = Chart.getChart(canvas);
+  if(existente) existente.destroy();
+  return new Chart(canvas.getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets:[
+      ..._datasetsFaixaAlvo(ordenada.length),
+      { label:'Glicemia', data: ordenada.map(r=>r.glicemia), borderColor:'rgba(42,111,111,0.35)', backgroundColor:'transparent', fill:false, tension:0.15, pointRadius:2, borderWidth:1, order:0 },
+      ...datasetsExcursoes
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:true, position:'bottom', labels:{boxWidth:10, font:{size:10}, filter:(item)=> item.text && !item.text.startsWith('Alvo')}},
+        title:{display:true, text:`MAGE = ${det.mage!==null?det.mage.toFixed(0):'—'} mg/dL — pontos de virada usados no cálculo, igual softwares clínicos de referência`, font:{size:12}} },
+      scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, maxTicksLimit:12 } } }
+    }
+  });
 }
 function renderMensal(){
   const key = document.getElementById('mensal-select').value;
@@ -2002,6 +2053,7 @@ function renderMensal(){
     </div>
     <div class="notice">${tendencia}${sPrev? ` (mês anterior: ${sPrev.media.toFixed(0)} mg/dL)`:''}</div>
     <div class="notice" style="background:var(--primary-tint)"><strong>MAGE</strong> (Mean Amplitude of Glycemic Excursions) mede a variabilidade glicêmica considerando só as oscilações relevantes (maiores que 1 desvio padrão) — quanto menor, mais estável o controle. <strong>Correlação dose × glicemia</strong> vai de -1 a 1: valores bem negativos indicam que doses maiores realmente resultam em glicemias mais baixas; perto de 0 sugere que outros fatores (alimentação, estresse, atividade física) estão influenciando tanto quanto a insulina.</div>
+    <div class="chart-wrap"><canvas id="chart-mage" height="220"></canvas></div>
 
     <div class="two-col">
       <div>
@@ -2100,6 +2152,8 @@ function renderMensal(){
 
   // guarda tudo que o relatório em PDF vai precisar, sem recalcular
   window._mensalReportData = { key, lista, listaCompleta, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia, curvasDoMes };
+
+  renderGraficoMAGE('chart-mage', lista);
 }
 function renderObsVetLista(key){
   const el = document.getElementById('obs-vet-lista');
@@ -2297,6 +2351,13 @@ async function exportarPDF(){
   imagemGrafico('chart-mensal-linha', 'Glicemia ao longo do mês, com linha de tendência (regressão linear).');
   imagemGrafico('chart-mensal-scatter', 'Relação entre a dose de insulina aplicada e a glicemia resultante.');
 
+  secao('Variabilidade glicêmica (MAGE)');
+  if(lista.length >= 3){
+    imagemGrafico('chart-mage', 'Pontos de virada (picos e vales) usados no cálculo do MAGE, conectados em vermelho — mesmo padrão visual usado em ferramentas clínicas de referência (MAGECAA, iglu).');
+  } else {
+    paragrafo('Dados insuficientes neste mês para calcular e visualizar o MAGE (mínimo de 3 leituras de glicemia).');
+  }
+
   // ---------- DISTRIBUIÇÃO POR HORÁRIO ----------
   secao('Distribuição por horário do dia');
   tabela([
@@ -2341,7 +2402,7 @@ async function exportarPDF(){
       const chartTemp = new Chart(canvasTemp.getContext('2d'), {
         type:'line',
         data:{ labels: stats.pontos.map(pt=> new Date(pt.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})),
-          datasets:[{ label:'Glicemia', data: stats.pontos.map(pt=>pt.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.25, pointRadius:3 }] },
+          datasets:[..._datasetsFaixaAlvo(stats.pontos.length), { label:'Glicemia', data: stats.pontos.map(pt=>pt.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.25, pointRadius:3 }] },
         options:{ responsive:false, animation:false, plugins:{legend:{display:false}, title:{display:true,text:`Curva de ${new Date(curva.inicio).toLocaleDateString('pt-BR')} — ${curva.insulinaDose||'—'} UI ${curva.insulinaTipo||''}`}} }
       });
       await new Promise(r=>setTimeout(r,60));
