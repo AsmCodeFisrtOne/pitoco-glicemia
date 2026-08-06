@@ -412,6 +412,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
         <label style="margin:0">Mês:</label>
         <select id="mensal-select" onchange="renderMensal()"></select>
         <button class="btn secondary" id="btn-exportar-pdf" onclick="exportarPDF()">Exportar PDF</button>
+        <button class="btn secondary" id="btn-exportar-planilha" onclick="exportarPlanilha()">Exportar planilha</button>
       </div>
       <div id="mensal-content"></div>
     </div>
@@ -674,7 +675,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.1"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev004.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -2243,6 +2244,53 @@ async function exportarPDF(){
   } finally {
     if(btnExport){ btnExport.textContent = textoOriginal; btnExport.disabled = false; }
   }
+}
+
+/* ---------------- EXPORTAR PLANILHA (CSV) ---------------- */
+function _csvEscape(valor){
+  const texto = valor===null || valor===undefined ? '' : String(valor);
+  if(/[",;\n]/.test(texto)) return '"' + texto.replace(/"/g,'""') + '"';
+  return texto;
+}
+function exportarPlanilha(){
+  const d = window._mensalReportData;
+  if(!d){ customAlert('Abra o relatório mensal antes de exportar.'); return; }
+  const { key, listaCompleta } = d;
+
+  const cabecalho = ['Data/Hora','Tipo','Glicemia (mg/dL)','Dose Insulina (UI)','Tipo Insulina','Local Aplicação','Sinais Clínicos','Atividade Física - Início','Atividade Física - Fim','Observação','Possível Somogyi'];
+  const linhas = listaCompleta.map(r=>[
+    fmtDate(r.dataGlicemia),
+    r.apenasObservacao ? 'Observação (sem glicemia)' : 'Glicemia',
+    r.glicemia!==null && r.glicemia!==undefined ? r.glicemia : '',
+    r.insulinaDose ?? '',
+    r.insulinaTipo || '',
+    r.localAplicacao || '',
+    (r.sinaisClinicos||[]).join('; '),
+    r.atividadeFisica&&r.atividadeFisica.inicio ? new Date(r.atividadeFisica.inicio).toLocaleString('pt-BR') : '',
+    r.atividadeFisica&&r.atividadeFisica.fim ? new Date(r.atividadeFisica.fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '',
+    r.observacao || '',
+    r.possivelSomogyi ? 'Sim' : ''
+  ]);
+
+  const linhasCsv = [cabecalho, ...linhas].map(linha=> linha.map(_csvEscape).join(';')).join('\r\n');
+  const csvComBom = '\uFEFF' + linhasCsv; // BOM ajuda o Excel a reconhecer acentuação em UTF-8
+
+  const contadorPlanilha = (()=>{
+    const chave = 'pitoco_planilha_contador_'+key;
+    const n = parseInt(localStorage.getItem(chave) || '0', 10) + 1;
+    localStorage.setItem(chave, String(n));
+    return n;
+  })();
+
+  const blob = new Blob([csvComBom], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pitoco-lancamentos-${key}-${String(contadorPlanilha).padStart(2,'0')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /* ---------------- FICHA DO PITOCO ---------------- */
