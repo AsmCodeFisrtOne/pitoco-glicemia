@@ -363,7 +363,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
         <label>Observação (contexto: exercício, estresse, etc.)</label>
         <textarea id="in-obs" placeholder="Opcional"></textarea>
       </div>
-      <div class="field">
+      <div class="field" id="bloco-curva-checkbox">
         <label><input type="checkbox" id="in-curva" style="width:auto;margin-right:6px;">Adicionar também à curva glicêmica em andamento (se houver)</label>
       </div>
       <p style="font-size:11px;color:var(--muted);margin:0 0 10px">O app monitora automaticamente hipoglicemia seguida de hiperglicemia de rebote (efeito Somogyi) em até 12h entre leituras, e avisa se detectar esse padrão.</p>
@@ -660,7 +660,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev003.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev003.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1333,6 +1333,8 @@ function setModoLancamento(modo){
   document.getElementById('btn-modo-obs').classList.toggle('secondary', !ehObs);
   const blocoVoz = document.getElementById('bloco-voz');
   if(blocoVoz) blocoVoz.style.display = ehObs ? 'none' : '';
+  const blocoCurva = document.getElementById('bloco-curva-checkbox');
+  if(blocoCurva){ blocoCurva.style.display = ehObs ? 'none' : ''; if(ehObs) document.getElementById('in-curva').checked = false; }
   if(ehObs){
     // no modo só-observação, os sinais clínicos e atividade física são o foco — já abre expandido
     const det = document.querySelector('details.more-details');
