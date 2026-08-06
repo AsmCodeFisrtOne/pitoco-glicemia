@@ -463,6 +463,16 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
         <div class="field"><label>Alvo máximo (mg/dL)</label><input type="number" id="cfg-alvo-max" value="250"></div>
       </div>
       <div class="field"><label>Hiperglicemia acima de (mg/dL)</label><input type="number" id="cfg-hiper" value="250"></div>
+      <div class="field">
+        <label>Intervalo sugerido entre leituras na curva glicêmica</label>
+        <select id="cfg-intervalo-curva">
+          <option value="0.5">A cada 30 minutos</option>
+          <option value="1" selected>A cada 1 hora</option>
+          <option value="1.5">A cada 1h30</option>
+          <option value="2">A cada 2 horas</option>
+          <option value="3">A cada 3 horas</option>
+        </select>
+      </div>
       <button class="btn" onclick="salvarConfig()">Salvar parâmetros</button>
     </div>
     <div class="card">
@@ -660,7 +670,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev003.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev003.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -757,7 +767,7 @@ try{ db.enablePersistence({synchronizeTabs:true}); }catch(e){ console.warn("Pers
 
 const PET_ID = "pitoco";
 let registros = [];
-let configParam = {hipo:100, alvoMin:200, alvoMax:250, hiper:250};
+let configParam = {hipo:100, alvoMin:200, alvoMax:250, hiper:250, intervaloCurvaHoras:1};
 let configPet = {};
 let editingId = null;
 let semanalChart = null, mensalChart1 = null, mensalChart2 = null;
@@ -843,11 +853,12 @@ function initApp(){
   document.getElementById('in-data-glicemia').value = toLocalInput(now);
 
   db.collection('config').doc('parametros').get().then(doc=>{
-    if(doc.exists){ configParam = doc.data(); }
+    if(doc.exists){ configParam = {intervaloCurvaHoras:1, ...doc.data()}; } // garante o padrão de 1h em documentos salvos antes desse campo existir
     document.getElementById('cfg-hipo').value = configParam.hipo;
     document.getElementById('cfg-alvo-min').value = configParam.alvoMin;
     document.getElementById('cfg-alvo-max').value = configParam.alvoMax;
     document.getElementById('cfg-hiper').value = configParam.hiper;
+    document.getElementById('cfg-intervalo-curva').value = configParam.intervaloCurvaHoras;
   });
 
   db.collection('config').doc(PET_ID).get().then(doc=>{
@@ -1117,7 +1128,8 @@ function renderCurvaTab(){
     const stats = ativa.pontos.length>=1 ? computeCurvaStats(ativa) : null;
     const inicioFmt = fmtDate(ativa.inicio);
     const ultimo = [...ativa.pontos].sort((a,b)=> new Date(b.horario)-new Date(a.horario))[0];
-    const proxima = ultimo ? new Date(new Date(ultimo.horario).getTime()+2*3600000) : null;
+    const intervaloH = configParam.intervaloCurvaHoras || 1;
+    const proxima = ultimo ? new Date(new Date(ultimo.horario).getTime()+intervaloH*3600000) : null;
     container.innerHTML = `
       <div class="card">
         <div class="curve-status"><span class="curve-dot"></span><h2 style="margin:0">Curva em andamento</h2></div>
@@ -1129,7 +1141,7 @@ function renderCurvaTab(){
           const cor = cls==='hipo'?'var(--danger)':cls==='hiper'?'var(--accent)':cls==='alvo'?'var(--target)':'inherit';
           return `<li><span class="t">${new Date(p.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${p.observacao?` <span style="color:var(--muted);font-style:italic">— ${p.observacao}</span>`:''}</span><span class="v" style="color:${cor}">${p.glicemia} mg/dL</span></li>`;
         }).join('')}</ul>
-        ${proxima ? `<div class="notice">Próxima leitura sugerida: por volta das ${proxima.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} (a cada 2h)</div>` : ''}
+        ${proxima ? `<div class="notice">Próxima leitura sugerida: por volta das ${proxima.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} (a cada ${intervaloH===1?'1 hora':intervaloH<1?(intervaloH*60)+' min':intervaloH+'h'})</div>` : ''}
         <h3>Novo ponto</h3>
         <div class="grid">
           <div class="field"><label>Glicemia (mg/dL)</label><input type="number" id="curva-novo-ponto" placeholder="Ex: 150"></div>
@@ -2579,7 +2591,8 @@ function salvarConfig(){
     hipo: parseFloat(document.getElementById('cfg-hipo').value),
     alvoMin: parseFloat(document.getElementById('cfg-alvo-min').value),
     alvoMax: parseFloat(document.getElementById('cfg-alvo-max').value),
-    hiper: parseFloat(document.getElementById('cfg-hiper').value)
+    hiper: parseFloat(document.getElementById('cfg-hiper').value),
+    intervaloCurvaHoras: parseFloat(document.getElementById('cfg-intervalo-curva').value)
   };
   if(Object.values(novo).some(v=>isNaN(v))){
     customAlert('Preencha todos os parâmetros com números válidos.');
