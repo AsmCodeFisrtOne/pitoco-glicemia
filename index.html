@@ -413,6 +413,8 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       <div class="month-select-row">
         <label style="margin:0">Mês:</label>
         <select id="mensal-select" onchange="renderMensal()"></select>
+      </div>
+      <div class="btn-row">
         <button class="btn secondary" id="btn-exportar-pdf" onclick="exportarPDF()">Exportar PDF</button>
         <button class="btn secondary" id="btn-exportar-planilha" onclick="exportarPlanilha()">Exportar planilha</button>
       </div>
@@ -677,7 +679,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.3"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev004.4"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
