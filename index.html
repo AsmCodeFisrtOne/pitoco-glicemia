@@ -828,7 +828,15 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev006.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev007.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev007.0: nova estratégia pra orientação — em vez de tentar (sem sucesso, por exigir toque
+// real do usuário) reconquistar a trava de paisagem sozinho depois que o sistema a derruba
+// (ex: ao trocar de app), o app agora MONITORA a orientação real da tela enquanto alguém está
+// logado. Se detectar que saiu da paisagem, desloga automaticamente (com 2.5s de tolerância
+// após login/retomada, pra não deslogar por causa do instante que a trava leva pra "pegar").
+// Assim, o próximo login — com o toque real de "Entrar" — já consegue travar a paisagem de
+// novo direitinho. Monitoramento liga nos 3 logins (tutor/vet/engenharia) e para no Logoff e
+// no botão Sair da tela de login.
 // Rev006.9: (1) exportarPDF() agora busca a ficha do pet (config/PET_ID) fresca no Firestore
 // bem antes de gerar o PDF, em vez de confiar só no configPet carregado no login — corrige
 // o PDF mostrando o nome antigo do pet depois de uma mudança na Ficha (seja na mesma sessão
@@ -1238,6 +1246,7 @@ async function tryLogin(){
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     _entrarFullscreenPaisagem();
+    _iniciarMonitoramentoOrientacao();
     initApp();
   } else if(senhaVet && v === senhaVet){
     modoAcesso = 'veterinaria';
@@ -1246,6 +1255,7 @@ async function tryLogin(){
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     _entrarFullscreenPaisagem();
+    _iniciarMonitoramentoOrientacao();
     initApp();
   } else if(v === SENHA_ENGENHARIA){
     modoAcesso = 'engenharia';
@@ -1254,6 +1264,7 @@ async function tryLogin(){
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     _entrarFullscreenPaisagem();
+    _iniciarMonitoramentoOrientacao();
     initApp();
   } else {
     document.getElementById('gate-err').textContent = 'Senha incorreta.';
@@ -1288,17 +1299,57 @@ function _sairFullscreenPaisagem(){
 }
 _entrarFullscreenPaisagem(); // tentativa early, assim que o script carrega (funciona se já veio de um gesto do usuário, ex: tocar no ícone do app)
 
+/* ---------------- MONITORAMENTO DE ORIENTAÇÃO: desloga se sair da paisagem ----------------
+   O navegador só deixa travar paisagem/fullscreen em resposta a um toque real do usuário —
+   por isso, tentar reconquistar a trava sozinho (sem toque) depois que o sistema a derruba
+   (ex: você troca de app e volta) não funciona de forma confiável. Estratégia adotada: em vez
+   de insistir em travar de novo, o app fica de olho na orientação real da tela; se detectar
+   que não está mais em paisagem enquanto alguém está logado, desloga sozinho — assim ninguém
+   continua usando o app fora do estado esperado sem perceber, e o próximo login (com o toque
+   real de "Entrar") já consegue travar a paisagem de novo direitinho. */
+let _monitoramentoOrientacaoAtivo = false;
+let _timerGracaOrientacao = null;
+function _iniciarMonitoramentoOrientacao(){
+  _monitoramentoOrientacaoAtivo = false;
+  if(_timerGracaOrientacao) clearTimeout(_timerGracaOrientacao);
+  // tolerância antes de começar a checar — a trava pode levar um instante pra "pegar" logo
+  // após o login ou ao retomar o app, e não queremos deslogar por causa desse instante.
+  _timerGracaOrientacao = setTimeout(()=>{ _monitoramentoOrientacaoAtivo = true; }, 2500);
+}
+function _pararMonitoramentoOrientacao(){
+  _monitoramentoOrientacaoAtivo = false;
+  if(_timerGracaOrientacao) clearTimeout(_timerGracaOrientacao);
+}
+function _checarOrientacaoEDeslogar(){
+  if(!_monitoramentoOrientacaoAtivo) return;
+  const appVisivel = document.getElementById('app') && document.getElementById('app').style.display !== 'none';
+  if(!appVisivel) return;
+  const emPaisagem = window.matchMedia('(orientation: landscape)').matches;
+  if(!emPaisagem){
+    _pararMonitoramentoOrientacao();
+    logout();
+  }
+}
+if(window.matchMedia){
+  window.matchMedia('(orientation: landscape)').addEventListener('change', _checarOrientacaoEDeslogar);
+}
+window.addEventListener('resize', _checarOrientacaoEDeslogar);
+
 // o sistema operacional solta a trava de paisagem/fullscreen quando o app vai pro segundo
-// plano (ex: você abre outro app). Ao voltar pro Pitoco, reaplica a trava automaticamente —
-// sem isso, o app ficava destravado até um novo login.
+// plano (ex: você abre outro app). Ao voltar pro Pitoco: tenta reconquistar a trava (pode não
+// funcionar, sem toque real) e, se realmente não conseguiu, o monitoramento acima desloga.
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible'){
     const appVisivel = document.getElementById('app') && document.getElementById('app').style.display !== 'none';
-    if(appVisivel) _entrarFullscreenPaisagem();
+    if(appVisivel){
+      _entrarFullscreenPaisagem();
+      setTimeout(_checarOrientacaoEDeslogar, 600); // dá um tempinho pra tentativa acima "pegar" antes de checar
+    }
   }
 });
 
 function logout(){
+  _pararMonitoramentoOrientacao();
   _sairFullscreenPaisagem();
   sessionStorage.removeItem('pitoco_auth');
   sessionStorage.removeItem('pitoco_modo');
@@ -1310,6 +1361,7 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   document.getElementById('app').style.display = 'block';
   window.addEventListener('DOMContentLoaded', initApp);
   window.addEventListener('DOMContentLoaded', _entrarFullscreenPaisagem);
+  window.addEventListener('DOMContentLoaded', _iniciarMonitoramentoOrientacao);
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 document.getElementById('gate-version').textContent = APP_VERSION;
@@ -1687,6 +1739,7 @@ function curvaAtiva(){ return curvas.find(c=>!c.finalizada); }
 
 /* ---------------- TELA DE LOGIN: botão Sair (fecha o app/aba) ---------------- */
 function fecharApp(){
+  _pararMonitoramentoOrientacao();
   _sairFullscreenPaisagem();
   window.close();
   // window.close() só funciona se a aba/janela foi aberta por script (ou em alguns PWAs
