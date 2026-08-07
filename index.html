@@ -157,7 +157,7 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
   box-shadow:none;cursor:zoom-out;margin:0;
 }
 .chart-expandivel::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
-.chart-expandivel.expandido::after{content:"🔍 toque para fechar";right:16px;bottom:16px;}
+.chart-expandivel.expandido::after{content:"🔍 toque 2x para fechar";right:16px;bottom:16px;}
 .chart-overlay-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;}
 .chart-overlay-backdrop.ativo{display:block;}
 .chart-wrap canvas{max-height:100%;}
@@ -457,7 +457,7 @@ if ('serviceWorker' in navigator) {
     <div class="card">
       <h2>Últimos 7 dias</h2>
       <div id="semanal-stats" class="stats"></div>
-      <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, semanalChart)"><canvas id="chart-semanal" height="180"></canvas></div>
+      <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, semanalChart, event)"><canvas id="chart-semanal" height="180"></canvas></div>
     </div>
     <div class="card">
       <h2>Sinais clínicos, atividade física e observações</h2>
@@ -828,7 +828,19 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev006.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev006.6"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev006.6: (1) fechar o gráfico expandido agora exige DUPLO clique/toque no mesmo lugar
+// (checando event.detail>=2) — um único toque enquanto expandido não faz mais nada, evita
+// fechar sem querer. Clicar fora (no fundo escurecido) continua fechando com um toque só.
+// (2) Corrigido de vez o bug do gráfico do Relatório mensal "esticado"/cobrindo o outro
+// gráfico depois de fechar o zoom: a causa era o Chart.js medindo o tamanho do container
+// ANTES do navegador terminar de aplicar a remoção da classe "expandido" — adicionado um
+// reflow forçado (leitura de offsetHeight) logo antes de chamar resize(), garantindo que o
+// Chart.js sempre meça o tamanho já atualizado. (3) Removida a chamada extra à Fullscreen
+// API do JS (document.requestFullscreen) — o manifest.webmanifest já pede
+// "display":"fullscreen" e cuida disso sozinho quando o app está instalado; a chamada
+// duplicada era o que disparava aquele aviso nativo do Android "app em tela cheia, deslize
+// pra sair". Mantido só o lock de orientação em paisagem.
 // Rev006.5: gráfico expandido agora cobre a tela INTEIRA (position:fixed; inset:0; 100vw/
 // 100dvh), em vez de ficar centralizado com margens (94vw/74vh) — mais simples e evita o bug
 // relatado de "fechar maior do que era e cobrir o outro gráfico" no Relatório mensal (dois
@@ -1224,35 +1236,20 @@ async function tryLogin(){
     document.getElementById('gate-err').textContent = 'Senha incorreta.';
   }
 }
-/* ---------------- ORIENTAÇÃO: força paisagem ao entrar no app, destrava ao sair ----------------
-   Funciona de fato (trava a rotação) em Android Chrome/Edge quando o app está instalado como
-   PWA (aí o manifest.webmanifest também pede "orientation":"landscape"). Em aba de navegador
-   comum ou no iOS Safari, a Screen Orientation API costuma recusar sem fullscreen — nesses
-   casos a chamada falha silenciosamente (catch vazio) e o app segue funcionando normal, só
-   sem forçar a rotação. */
-/* ---------------- ORIENTAÇÃO: fullscreen + paisagem na página INTEIRA (document.documentElement) ----------------
-   Diferente da tentativa anterior (que dava fullscreen num <div> específico, dentro do fluxo
-   normal da página, e por isso conflitava com o CSS dele) — aqui o fullscreen é pedido pro
-   <html> inteiro, que não tem nenhum position/transform especial, então o app continua
-   renderizando normal, só que ocupando a tela toda e sem a barra do navegador. */
+/* ---------------- ORIENTAÇÃO: paisagem, sem chamar a Fullscreen API do JS ----------------
+   O manifest.webmanifest já pede "display":"fullscreen", que faz o Android abrir o app
+   instalado em tela cheia nativa sozinho, sem barra do navegador. Chamar document.
+   requestFullscreen() aqui EM CIMA disso é redundante e foi o que disparava aquele aviso
+   nativo "app em tela cheia, deslize/aperte X para sair" — removido. Sobra só o lock de
+   orientação, que funciona no contexto de PWA instalado sem precisar de fullscreen via JS. */
 function _entrarFullscreenPaisagem(){
-  const el = document.documentElement;
-  if(el.requestFullscreen){
-    el.requestFullscreen().then(()=>{
-      if(screen.orientation && screen.orientation.lock){
-        screen.orientation.lock('landscape').catch(()=>{});
-      }
-    }).catch(()=>{});
-  } else if(screen.orientation && screen.orientation.lock){
-    screen.orientation.lock('landscape').catch(()=>{}); // sem suporte a fullscreen — tenta só a orientação mesmo assim
+  if(screen.orientation && screen.orientation.lock){
+    screen.orientation.lock('landscape').catch(()=>{});
   }
 }
 function _sairFullscreenPaisagem(){
   if(screen.orientation && screen.orientation.unlock){
     try{ screen.orientation.unlock(); }catch(e){}
-  }
-  if(document.fullscreenElement){
-    document.exitFullscreen().catch(()=>{});
   }
 }
 _entrarFullscreenPaisagem(); // tentativa early, assim que o script carrega (funciona se já veio de um gesto do usuário, ex: tocar no ícone do app)
@@ -1660,20 +1657,29 @@ function fecharApp(){
    bagunçava o tamanho da tela em vários aparelhos — revertido. Agora é só um overlay CSS
    position:fixed centralizado (ver .chart-expandivel.expandido), sem mexer em
    fullscreen/orientação do navegador. */
-function toggleChartExpandido(wrapEl, chartInstance){
-  const expandindo = !wrapEl.classList.contains('expandido');
-  wrapEl.classList.toggle('expandido');
+function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir){
+  wrapEl.classList.toggle('expandido', expandir);
   const backdrop = document.getElementById('chart-overlay-backdrop');
   if(backdrop){
-    backdrop.classList.toggle('ativo', expandindo);
-    backdrop.onclick = expandindo ? (()=> toggleChartExpandido(wrapEl, chartInstance)) : null;
+    backdrop.classList.toggle('ativo', expandir);
+    backdrop.onclick = expandir ? (()=> _aplicarEstadoChartExpandido(wrapEl, chartInstance, false)) : null;
   }
-  // resize em dois momentos: um cedo (garante que o canvas já acompanha o novo tamanho o
-  // quanto antes) e outro um pouco depois (cobre o caso do reflow do navegador ainda não ter
-  // terminado no primeiro) — evita o canvas "herdar" o tamanho do estado anterior ao fechar.
   if(chartInstance){
-    requestAnimationFrame(()=> chartInstance.resize());
+    void wrapEl.offsetHeight; // força reflow síncrono ANTES de medir — sem isso o Chart.js às vezes
+    // ainda enxergava o tamanho anterior (expandido) no momento do resize() e "herdava" esse
+    // tamanho no canvas mesmo depois do container já ter voltado ao normal (o bug do gráfico
+    // "esticado" no Relatório mensal, que só sumia trocando de aba e recriando o gráfico do zero).
+    chartInstance.resize();
     setTimeout(()=> chartInstance.resize(), 150);
+  }
+}
+function toggleChartExpandido(wrapEl, chartInstance, evt){
+  const jaExpandido = wrapEl.classList.contains('expandido');
+  if(jaExpandido){
+    if(!evt || evt.detail < 2) return; // enquanto expandido, só fecha com DUPLO clique no mesmo lugar
+    _aplicarEstadoChartExpandido(wrapEl, chartInstance, false);
+  } else {
+    _aplicarEstadoChartExpandido(wrapEl, chartInstance, true);
   }
 }
 function renderCurvaTab(){
@@ -2646,7 +2652,7 @@ function renderMensal(){
           <button class="btn secondary" id="btn-view-diario" onclick="setChartView('diario')" style="font-size:12px;padding:6px 10px">Média diária</button>
           <button class="btn secondary" id="btn-view-bruto" onclick="setChartView('bruto')" style="font-size:12px;padding:6px 10px">Cada leitura</button>
         </div>
-        <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, mensalChart1)"><canvas id="chart-mensal-linha" height="200"></canvas></div>
+        <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, mensalChart1, event)"><canvas id="chart-mensal-linha" height="200"></canvas></div>
       </div>
       <div class="chart-wrap"><canvas id="chart-mensal-scatter" height="200"></canvas></div>
     </div>
