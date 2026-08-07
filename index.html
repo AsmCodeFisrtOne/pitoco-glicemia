@@ -150,11 +150,16 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
 .pill.alvo{background:var(--target-tint);color:var(--target);}
 
 .chart-wrap{background:var(--surface);border-radius:10px;padding:10px 6px;margin:14px 0;position:relative;height:220px;}
-.chart-wrap-curva{height:220px;cursor:zoom-in;transition:height .25s ease;}
-.chart-wrap-curva.expandido{height:380px;cursor:zoom-out;}
-@media (min-width: 640px){.chart-wrap-curva.expandido{height:460px;}}
+.chart-wrap-curva{height:220px;cursor:zoom-in;}
+.chart-wrap-curva.expandido{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:94vw;max-width:900px;height:74vh;z-index:1001;
+  box-shadow:0 10px 40px rgba(0,0,0,.35);cursor:zoom-out;margin:0;
+}
 .chart-wrap-curva::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
-.chart-wrap-curva.expandido::after{content:"🔍 toque para reduzir";}
+.chart-wrap-curva.expandido::after{content:"🔍 toque para fechar";}
+.chart-overlay-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;}
+.chart-overlay-backdrop.ativo{display:block;}
 .chart-wrap canvas{max-height:100%;}
 .empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
 .two-col{display:grid;grid-template-columns:1fr;gap:16px;}
@@ -804,6 +809,7 @@ if ('serviceWorker' in navigator) {
   </section>
 </div>
   <!-- ---------- MODAL CUSTOMIZADO ---------- -->
+  <div id="chart-overlay-backdrop"></div>
   <div id="custom-modal-overlay">
     <div class="cm-box">
       <div class="cm-header">
@@ -821,7 +827,11 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev005.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev005.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev005.8: gráfico da Curva glicêmica agora expande em overlay real ao clicar/tocar —
+// fica fixo, centralizado, por cima de tudo (94vw/900px máx · 74vh de altura), com fundo
+// escurecido atrás (chart-overlay-backdrop). Fecha clicando de novo no gráfico ou clicando
+// fora, no fundo escurecido.
 // Rev005.7: gráfico da Curva glicêmica volta ao tamanho padrão (220px) e agora expande ao
 // tocar/clicar nele (380px mobile / 460px telas ≥640px) — toque de novo pra reduzir. Dica
 // "🔍 toque para ampliar/reduzir" no canto do gráfico. Vale pros dois gráficos da aba
@@ -1539,9 +1549,15 @@ function computeCurvaStats(curva){
 }
 function curvaAtiva(){ return curvas.find(c=>!c.finalizada); }
 function toggleChartExpandido(wrapEl, chartInstance){
+  const expandindo = !wrapEl.classList.contains('expandido');
   wrapEl.classList.toggle('expandido');
-  // dá um tempinho pra transição de altura (CSS) terminar antes do Chart.js recalcular o canvas
-  setTimeout(()=>{ if(chartInstance) chartInstance.resize(); }, 260);
+  const backdrop = document.getElementById('chart-overlay-backdrop');
+  if(backdrop){
+    backdrop.classList.toggle('ativo', expandindo);
+    backdrop.onclick = expandindo ? (()=> toggleChartExpandido(wrapEl, chartInstance)) : null;
+  }
+  // dá um tempinho pro reflow (mudança de position/tamanho) terminar antes do Chart.js recalcular o canvas
+  setTimeout(()=>{ if(chartInstance) chartInstance.resize(); }, 60);
 }
 function renderCurvaTab(){
   const container = document.getElementById('curva-container');
