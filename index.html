@@ -156,6 +156,13 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
   width:94vw;max-width:900px;height:74vh;z-index:1001;
   box-shadow:0 10px 40px rgba(0,0,0,.35);cursor:zoom-out;margin:0;
 }
+/* Celular em paisagem: tela curta e larga — usa quase toda a altura disponível
+   e libera o teto de 900px de largura, já que a largura raramente é o limite ali. */
+@media (orientation: landscape) and (max-height: 500px){
+  .chart-expandivel.expandido{
+    width:96vw;max-width:none;height:92vh;
+  }
+}
 .chart-expandivel::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
 .chart-expandivel.expandido::after{content:"🔍 toque para fechar";}
 .chart-overlay-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;}
@@ -263,6 +270,7 @@ if ('serviceWorker' in navigator) {
     <input type="password" id="gate-pass" placeholder="Senha de acesso" autocomplete="off">
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
+    <button class="logout" style="margin-top:10px" onclick="fecharApp()">Sair</button>
     <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;"></div>
   </div>
 </div>
@@ -827,7 +835,17 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev005.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev006.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev006.0: (1) botão "Sair" na tela de login, tenta window.close() e avisa se não conseguir
+// fechar sozinho (a maioria dos navegadores bloqueia fechar abas que o próprio usuário abriu).
+// (2) Tamanhos do gráfico expandido reestruturados para celular em paisagem (tela curta e
+// larga): media query @media(orientation:landscape) and (max-height:500px) usa 96vw/92vh sem
+// teto de largura. (3) Ao expandir um gráfico, o app agora entra em tela cheia (Fullscreen
+// API) e tenta travar a orientação em paisagem automaticamente (Screen Orientation API) —
+// funciona em Android Chrome/Edge; iOS Safari não suporta travar orientação em fullscreen,
+// então nesses aparelhos o gráfico só fica grande, sem forçar a rotação. Ao fechar o gráfico
+// (de novo nele, clicando fora, ou saindo do fullscreen pelo gesto do sistema), tudo volta
+// automaticamente ao estado original — orientação destravada e fullscreen encerrado.
 // Rev005.9: expandir-ao-clicar (overlay) removido dos gráficos da Curva glicêmica (voltaram
 // ao comportamento normal, sem clique especial) e movido pros gráficos principais de
 // glicemia do Relatório semanal (chart-semanal) e do Relatório mensal (chart-mensal-linha).
@@ -1554,6 +1572,25 @@ function computeCurvaStats(curva){
   };
 }
 function curvaAtiva(){ return curvas.find(c=>!c.finalizada); }
+
+/* ---------------- TELA DE LOGIN: botão Sair (fecha o app/aba) ---------------- */
+function fecharApp(){
+  window.close();
+  // window.close() só funciona se a aba/janela foi aberta por script (ou em alguns PWAs
+  // instalados). Se não fechar (a maioria dos casos no navegador comum), avisa o usuário.
+  setTimeout(()=>{
+    customAlert('Não foi possível fechar automaticamente — pode fechar o app/aba manualmente agora.');
+  }, 300);
+}
+
+/* ---------------- GRÁFICO EXPANDIDO: tela cheia + paisagem automática no celular ----------------
+   Ao expandir: entra em fullscreen e trava a orientação em paisagem (onde o navegador suporta —
+   Android Chrome/Edge; iOS Safari não suporta a Screen Orientation API em fullscreen, então nesses
+   aparelhos o gráfico só fica grande mesmo, sem forçar a rotação).
+   Ao fechar (de novo no gráfico, clicando fora, ou saindo do fullscreen pelo gesto do sistema):
+   destrava a orientação e sai do fullscreen, voltando tudo ao estado original. */
+let _chartExpandidoEl = null;
+
 function toggleChartExpandido(wrapEl, chartInstance){
   const expandindo = !wrapEl.classList.contains('expandido');
   wrapEl.classList.toggle('expandido');
@@ -1562,9 +1599,39 @@ function toggleChartExpandido(wrapEl, chartInstance){
     backdrop.classList.toggle('ativo', expandindo);
     backdrop.onclick = expandindo ? (()=> toggleChartExpandido(wrapEl, chartInstance)) : null;
   }
+  if(expandindo){
+    _chartExpandidoEl = wrapEl;
+    if(wrapEl.requestFullscreen){
+      wrapEl.requestFullscreen().then(()=>{
+        if(screen.orientation && screen.orientation.lock){
+          screen.orientation.lock('landscape').catch(()=>{}); // navegador pode recusar (ex: iOS Safari) — sem problema, segue só grande mesmo
+        }
+      }).catch(()=>{});
+    }
+  } else {
+    _chartExpandidoEl = null;
+    if(screen.orientation && screen.orientation.unlock){
+      try{ screen.orientation.unlock(); }catch(e){}
+    }
+    if(document.fullscreenElement){
+      document.exitFullscreen().catch(()=>{});
+    }
+  }
   // dá um tempinho pro reflow (mudança de position/tamanho) terminar antes do Chart.js recalcular o canvas
   setTimeout(()=>{ if(chartInstance) chartInstance.resize(); }, 60);
 }
+// se o usuário sair do fullscreen pelo gesto do próprio sistema (voltar, deslizar), sincroniza o estado
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement && _chartExpandidoEl && _chartExpandidoEl.classList.contains('expandido')){
+    _chartExpandidoEl.classList.remove('expandido');
+    const backdrop = document.getElementById('chart-overlay-backdrop');
+    if(backdrop){ backdrop.classList.remove('ativo'); backdrop.onclick = null; }
+    if(screen.orientation && screen.orientation.unlock){
+      try{ screen.orientation.unlock(); }catch(e){}
+    }
+    _chartExpandidoEl = null;
+  }
+});
 function renderCurvaTab(){
   const container = document.getElementById('curva-container');
   const ativa = curvaAtiva();
