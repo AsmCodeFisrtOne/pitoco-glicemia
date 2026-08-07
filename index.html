@@ -156,14 +156,15 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
   border-radius:0;z-index:1001;padding:16px;
   box-shadow:none;cursor:zoom-out;margin:0;
 }
-/* Desktop/notebook (mouse de verdade, não touch): em vez de esticar pra tela toda — que fica
-   quadrado/estranho conforme o formato da janela — usa uma caixa central com proporção fixa
-   16:9 (parecida com a proporção que já fica boa no celular em paisagem). */
+/* Desktop/notebook (mouse de verdade, não touch): largura (horizontal) preenche quase a
+   tela toda; altura (vertical) é calculada a partir dela, na proporção 19,5:9 — a mesma
+   proporção de tela de celular moderno em paisagem (iPhone/Android recentes), a pedido do
+   usuário, mesmo sendo uma proporção BEM larga (mais larga que 16:9). */
 @media (hover: hover) and (pointer: fine){
   .chart-expandivel.expandido{
     inset:auto; top:50%; left:50%; transform:translate(-50%,-50%);
-    width:min(92vw, calc(92vh * 16 / 9));
-    height:min(92vh, calc(92vw * 9 / 16));
+    width:92vw; max-width:1600px; max-height:92vh;
+    aspect-ratio:19.5/9; height:auto;
     border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.35);
   }
 }
@@ -839,7 +840,12 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev007.1"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev007.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev007.2: gráfico expandido no desktop/notebook — largura (horizontal) preenche quase a
+// tela toda (92vw, teto de 1600px) e a altura é calculada a partir dela na proporção 19,5:9
+// (a mesma de tela de celular moderno em paisagem, ex: iPhone/Android recentes), em vez do
+// 16:9 da Rev007.1. Nota: essa proporção é MAIS larga que 16:9, não menos — fisicamente é
+// assim que celular em paisagem é. Aplicado a pedido do usuário mesmo assim.
 // Rev007.1: gráfico expandido no desktop/notebook (detectado via @media(hover:hover) and
 // (pointer:fine), que identifica mouse de verdade em vez de touchscreen) agora usa uma caixa
 // central com proporção fixa 16:9, em vez de esticar pra 100vw/100dvh — no PC isso ficava
