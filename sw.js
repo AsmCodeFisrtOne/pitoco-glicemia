@@ -1,11 +1,10 @@
 // Pitoco PWA - service worker
 // Estratégia: network-first para navegação (sempre busca a versão nova publicada);
 // cache entra em ação apenas quando offline.
-const CACHE_NAME = 'pitoco-cache-v1';
+const CACHE_NAME = 'pitoco-cache-v2';
 const PRECACHE = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest'
+  new URL('./index.html', self.registration.scope).toString(),
+  new URL('./manifest.webmanifest', self.registration.scope).toString()
 ];
 
 self.addEventListener('install', (event) => {
@@ -27,7 +26,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
-  if (request.url.startsWith(self.location.origin)) {
+  if (new URL(request.url).origin === self.location.origin) {
     // Network-first: HTML e assets do próprio site
     event.respondWith(
       fetch(request)
