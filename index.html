@@ -509,11 +509,11 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       <button class="btn" onclick="alterarSenha()">Salvar nova senha</button>
     </div>
     <div class="card">
-      <h2>Senha de acesso para a veterinária (modo somente leitura)</h2>
+      <h2>Senha de acesso para o profissional de saúde (modo somente leitura)</h2>
       <div class="notice">Opcional. Se configurada, quem entrar com essa senha vê os relatórios, curvas, exames e a ficha — mas não consegue lançar dados, editar/excluir nada, nem acessar Configurações. Útil pra dar acesso à veterinária sem expor a senha completa do tutor.</div>
       <div class="field"><label>Senha atual (a mesma da entrada normal)</label><input type="password" id="senha-atual-vet"></div>
-      <div class="field"><label>Senha da veterinária (deixe em branco pra desativar)</label><input type="password" id="senha-vet-nova"></div>
-      <button class="btn" onclick="alterarSenhaVet()">Salvar senha da veterinária</button>
+      <div class="field"><label>Senha do profissional de saúde (deixe em branco pra desativar)</label><input type="password" id="senha-vet-nova"></div>
+      <button class="btn" onclick="alterarSenhaVet()">Salvar senha do profissional de saúde</button>
     </div>
     <div class="card">
       <h2 style="color:var(--danger)">Segurança</h2>
@@ -662,8 +662,6 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
           <tr><td>Lembrete de curva atrasada</td><td>Se já passaram 14 dias ou mais desde a última curva glicêmica completa, a aba "Curva glicêmica" mostra um aviso sugerindo fazer uma nova em breve.</td></tr>
           <tr><td>Local de aplicação e rodízio</td><td>Campo opcional em "Mais detalhes" pra marcar onde a insulina foi aplicada (pescoço, lombo, coxa — cada lado). O app lembra o último local usado e sugere o próximo na rotação, ajudando a evitar aplicar sempre no mesmo lugar (o que pode endurecer o tecido e atrapalhar a absorção da insulina).</td></tr>
           <tr><td>Retorno ao basal (na curva)</td><td>No resultado de cada curva glicêmica, compara a glicemia inicial (antes da insulina) com a última leitura registrada. Se a última leitura já está perto do valor inicial, sugere que o efeito da insulina está acabando na hora certa; se ainda está bem baixa, pode indicar que o efeito ainda está ativo perto da próxima dose.</td></tr>
-          <tr><td>MAGE relativo (variabilidade glicêmica)</td><td>Mede o tamanho médio das oscilações relevantes de glicemia no mês (maiores que 1 desvio padrão), expresso como % da glicemia média — não como valor absoluto em mg/dL, já que não existe régua validada pra cães. O gráfico correspondente mostra os pontos de virada usados no cálculo, igual ferramentas clínicas de referência (MAGECAA, iglu). Use como comparação mês a mês, não como número isolado.</td></tr>
-          <tr><td>Correlação dose × glicemia</td><td>Vai de -1 a 1. Valores bem negativos indicam que doses maiores realmente resultam em glicemias mais baixas; perto de 0 sugere que outros fatores (alimentação, estresse, atividade física) influenciam tanto quanto a insulina.</td></tr>
         </tbody>
       </table>
       <div class="notice">Esses recursos são apoios de leitura dos dados, não diagnósticos — servem para levar padrões observados para a conversa com a veterinária, não para substituir a avaliação clínica dela.</div>
@@ -688,7 +686,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev004.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -803,8 +801,8 @@ let curvaChartLive = null, curvaChartResultado = null;
 
 /* ---------------- LOGIN ---------------- */
 let senhaAcesso = SENHA_PADRAO;
-let senhaVet = null; // senha opcional de acesso restrito (modo veterinária), configurada em Configurações
-let modoAcesso = 'completo'; // 'completo' ou 'veterinaria'
+let senhaVet = null; // senha opcional de acesso restrito (profissional de saúde), configurada em Configurações
+let modoAcesso = 'completo'; // 'completo' (tutor) ou 'veterinaria' (profissional de saúde)
 const senhaPromise = db.collection('config').doc('acesso').get()
   .then(doc=>{ if(doc.exists){ if(doc.data().senha){ senhaAcesso = doc.data().senha; } if(doc.data().senhaVet){ senhaVet = doc.data().senhaVet; } } })
   .catch(()=>{ /* offline na primeira vez: mantém a senha padrão */ });
@@ -889,7 +887,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
 /* ---------------- INIT ---------------- */
 function aplicarModoAcesso(){
   if(modoAcesso !== 'veterinaria') return;
-  // esconde as abas de entrada de dados e configurações — modo veterinária é só leitura/saída
+  // esconde as abas de entrada de dados e configurações — profissional de saúde só visualiza
   document.querySelectorAll('nav.tabs button[data-tab="lancar"], nav.tabs button[data-tab="config"]').forEach(b=> b.style.display='none');
   // se por acaso a aba ativa for uma dessas, troca pro relatório mensal
   const abaAtiva = document.querySelector('nav.tabs button.active');
@@ -901,7 +899,7 @@ function aplicarModoAcesso(){
   if(header && !document.getElementById('badge-modo-vet')){
     const badge = document.createElement('span');
     badge.id = 'badge-modo-vet';
-    badge.textContent = '👁️ Modo veterinária (somente leitura)';
+    badge.textContent = '👁️ Acesso profissional de saúde (somente leitura)';
     badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;';
     header.appendChild(badge);
   }
@@ -956,7 +954,6 @@ function initApp(){
   db.collection('curvas').orderBy('inicio','desc').limit(30).onSnapshot(snap=>{
     curvas = snap.docs.map(d=>({id:d.id, ...d.data()}));
     renderCurvaTab();
-    populateMesSelect();
   });
 
   db.collection('exames').orderBy('data','desc').onSnapshot(snap=>{
@@ -1050,13 +1047,13 @@ async function alterarSenhaVet(){
   const atual = document.getElementById('senha-atual-vet').value;
   const nova = document.getElementById('senha-vet-nova').value;
   if(atual !== senhaAcesso){ await customAlert('Senha atual incorreta. Nada foi alterado.'); return; }
-  if(nova && nova.length < 4){ await customAlert('A senha da veterinária precisa ter pelo menos 4 caracteres (ou deixe em branco pra desativar).'); return; }
-  if(nova && nova === senhaAcesso){ await customAlert('A senha da veterinária precisa ser diferente da senha principal.'); return; }
+  if(nova && nova.length < 4){ await customAlert('A senha do profissional de saúde precisa ter pelo menos 4 caracteres (ou deixe em branco pra desativar).'); return; }
+  if(nova && nova === senhaAcesso){ await customAlert('A senha do profissional de saúde precisa ser diferente da senha principal.'); return; }
   db.collection('config').doc('acesso').set({senhaVet: nova || null}, {merge:true}).then(async ()=>{
     senhaVet = nova || null;
     document.getElementById('senha-atual-vet').value = '';
     document.getElementById('senha-vet-nova').value = '';
-    await customAlert(nova ? 'Senha da veterinária salva com sucesso.' : 'Senha da veterinária desativada.', 'Sucesso', '✅');
+    await customAlert(nova ? 'Senha do profissional de saúde salva com sucesso.' : 'Senha do profissional de saúde desativada.', 'Sucesso', '✅');
   }).catch(async err=> await customAlert('Erro ao salvar: '+err.message));
 }
 async function apagarTudoFluxo(){
@@ -1690,46 +1687,6 @@ function renderMonths(){
 }
 
 /* ---------------- RELATÓRIO SEMANAL ---------------- */
-function calcularMAGEDetalhado(listaOrdenada){
-  // versão detalhada: retorna também QUAIS pontos de virada entraram no cálculo,
-  // pra poder desenhar no gráfico igual as ferramentas clínicas de referência (MAGECAA, iglu)
-  if(listaOrdenada.length < 3) return { mage:null, excursoesValidas:[] };
-  const valores = listaOrdenada.map(r=>r.glicemia);
-  const sd = stdev(valores);
-  const indicesVirada = [0];
-  for(let i=1; i<valores.length-1; i++){
-    const prev=valores[i-1], cur=valores[i], next=valores[i+1];
-    if((cur-prev>0 && next-cur<0) || (cur-prev<0 && next-cur>0)) indicesVirada.push(i);
-  }
-  indicesVirada.push(valores.length-1);
-  const excursoesValidas = [];
-  for(let i=1; i<indicesVirada.length; i++){
-    const iA = indicesVirada[i-1], iB = indicesVirada[i];
-    const delta = Math.abs(valores[iB]-valores[iA]);
-    if(delta > sd){
-      excursoesValidas.push({ iA, iB, valA:valores[iA], valB:valores[iB], horarioA:listaOrdenada[iA].dataGlicemia, horarioB:listaOrdenada[iB].dataGlicemia, delta });
-    }
-  }
-  const mage = excursoesValidas.length ? mean(excursoesValidas.map(e=>e.delta)) : 0;
-  return { mage, excursoesValidas };
-}
-function calcularMAGE(valoresOrdenados){
-  // Mean Amplitude of Glycemic Excursions — métrica padrão de variabilidade glicêmica
-  // (mantido como wrapper simples — só o número — usado no cálculo geral de estatísticas)
-  if(valoresOrdenados.length < 3) return null;
-  return calcularMAGEDetalhado(valoresOrdenados.map(v=>({glicemia:v, dataGlicemia:null}))).mage;
-}
-function calcularCorrelacao(pares){
-  // coeficiente de correlação de Pearson entre dose de insulina e glicemia resultante
-  const n = pares.length;
-  if(n < 3) return null;
-  const xs = pares.map(p=>p[0]), ys = pares.map(p=>p[1]);
-  const mx = mean(xs), my = mean(ys);
-  let num=0, denx=0, deny=0;
-  for(let i=0;i<n;i++){ num += (xs[i]-mx)*(ys[i]-my); denx += (xs[i]-mx)**2; deny += (ys[i]-my)**2; }
-  const den = Math.sqrt(denx*deny);
-  return den===0 ? null : num/den;
-}
 function calcStatsPeriodo(lista){
   const vals = lista.map(r=>r.glicemia);
   if(!vals.length) return null;
@@ -1737,8 +1694,6 @@ function calcStatsPeriodo(lista){
   const hiperN = lista.filter(r=>r.glicemia > configParam.hiper).length;
   const alvoN = lista.filter(r=>r.glicemia >= configParam.alvoMin && r.glicemia <= configParam.alvoMax).length;
   const insulinas = lista.filter(r=>r.insulinaDose).map(r=>r.insulinaDose);
-  const paresDoseGlicemia = lista.filter(r=>r.insulinaDose).map(r=>[r.insulinaDose, r.glicemia]);
-  const ordenadaPorData = [...lista].sort((a,b)=> new Date(a.dataGlicemia)-new Date(b.dataGlicemia)).map(r=>r.glicemia);
   return {
     n: vals.length,
     media: mean(vals),
@@ -1748,10 +1703,7 @@ function calcStatsPeriodo(lista){
     pctAlvo: (alvoN/vals.length*100),
     hipoN, hiperN,
     insulinaTotal: insulinas.reduce((a,b)=>a+b,0),
-    insulinaMedia: mean(insulinas),
-    mage: calcularMAGE(ordenadaPorData),
-    mageRelativo: (()=>{ const m = calcularMAGE(ordenadaPorData); const media = mean(vals); return (m!==null && media) ? (m/media*100) : null; })(),
-    correlacaoDoseGlicemia: calcularCorrelacao(paresDoseGlicemia)
+    insulinaMedia: mean(insulinas)
   };
 }
 function renderSemanal(){
@@ -1838,9 +1790,7 @@ function renderSinaisObservacoes(elId, listaCompleta){
 /* ---------------- RELATÓRIO MENSAL ---------------- */
 function populateMesSelect(){
   const sel = document.getElementById('mensal-select');
-  const keysRegistros = registros.map(r=>monthKey(r.dataGlicemia));
-  const keysCurvas = curvas.filter(c=>c.finalizada).map(c=>monthKey(c.inicio));
-  const keys = [...new Set([...keysRegistros, ...keysCurvas])].sort().reverse();
+  const keys = [...new Set(registros.map(r=>monthKey(r.dataGlicemia)))].sort().reverse();
   const atual = sel.value;
   sel.innerHTML = keys.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join('') || '<option value="">—</option>';
   if(keys.includes(atual)) sel.value = atual;
@@ -1929,39 +1879,6 @@ function atualizarBotoesChartView(){
   bd.classList.toggle('secondary', modo!=='diario');
   bb.classList.toggle('secondary', modo!=='bruto');
 }
-function renderGraficoMAGE(canvasId, listaOrdenavel){
-  const canvas = document.getElementById(canvasId);
-  if(!canvas) return null;
-  const ordenada = [...listaOrdenavel].sort((a,b)=> new Date(a.dataGlicemia)-new Date(b.dataGlicemia));
-  if(ordenada.length < 3) return null;
-  const det = calcularMAGEDetalhado(ordenada);
-  const mediaGlicemia = mean(ordenada.map(r=>r.glicemia));
-  const mageRel = (det.mage!==null && mediaGlicemia) ? (det.mage/mediaGlicemia*100) : null;
-  const labels = ordenada.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR'));
-  const datasetsExcursoes = det.excursoesValidas.map((exc,i)=>({
-    label: i===0 ? 'Excursão usada no MAGE' : '',
-    data: ordenada.map((_,idx)=> idx===exc.iA ? exc.valA : idx===exc.iB ? exc.valB : null),
-    borderColor:'#C1533D', borderWidth:2, spanGaps:true, fill:false, tension:0,
-    pointRadius:(ctxp)=> (ctxp.dataIndex===exc.iA || ctxp.dataIndex===exc.iB) ? 5 : 0,
-    pointBackgroundColor:'#C1533D', order:5
-  }));
-  const existente = Chart.getChart(canvas);
-  if(existente) existente.destroy();
-  return new Chart(canvas.getContext('2d'), {
-    type:'line',
-    data:{ labels, datasets:[
-      ..._datasetsFaixaAlvo(ordenada.length),
-      { label:'Glicemia', data: ordenada.map(r=>r.glicemia), borderColor:'rgba(42,111,111,0.35)', backgroundColor:'transparent', fill:false, tension:0.15, pointRadius:2, borderWidth:1, order:0 },
-      ...datasetsExcursoes
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:true, position:'bottom', labels:{boxWidth:10, font:{size:10}, filter:(item)=> item.text && !item.text.startsWith('Alvo')}},
-        title:{display:true, text:`MAGE relativo = ${mageRel!==null?mageRel.toFixed(0)+'%':'—'} — pontos de virada em vermelho (mesmo padrão de ferramentas clínicas de referência)`, font:{size:11.5} },
-        subtitle:{display:true, text:['É a média das oscilações relevantes de glicemia, expressa em % da média do mês (não em mg/dL) — não existe régua validada pra cães, então serve como índice pra comparar este mês com os próximos, não como valor absoluto isolado.'], font:{size:9.5, style:'italic'}, color:'#5C6B6B', padding:{bottom:8}} },
-      scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, maxTicksLimit:12 } } }
-    }
-  });
-}
 function renderMensal(){
   const key = document.getElementById('mensal-select').value;
   const content = document.getElementById('mensal-content');
@@ -2002,34 +1919,9 @@ function renderMensal(){
   // efeito Somogyi: reaproveita a marcação já feita no momento do lançamento
   const episodiosSomogyi = lista.filter(r=>r.possivelSomogyi);
 
-  // curvas glicêmicas completas iniciadas neste mês
-  const curvasDoMes = curvas.filter(c=>c.finalizada && monthKey(c.inicio)===key)
-    .sort((a,b)=> new Date(a.inicio)-new Date(b.inicio))
-    .map(c=> ({ curva:c, stats: computeCurvaStats(c) }));
-
   if(!s){
-    content.innerHTML = `
-      <div class="empty">Sem lançamentos com glicemia neste mês.</div>
-      <h3>Curvas glicêmicas do mês</h3>
-      ${curvasDoMes.length ? `
-        <table>
-          <thead><tr><th>Data</th><th>Dose/Tipo</th><th>Nadir medido</th><th>Nadir estimado</th><th>Retorno ao basal</th><th>Tempo no alvo</th></tr></thead>
-          <tbody>${curvasDoMes.map(({curva,stats})=>`
-            <tr>
-              <td>${new Date(curva.inicio).toLocaleDateString('pt-BR')}</td>
-              <td>${curva.insulinaDose||'—'} UI ${curva.insulinaTipo||''}</td>
-              <td>${stats.medido.glicemia} mg/dL</td>
-              <td>${stats.estimado!==null?stats.estimado.toFixed(0)+' mg/dL':'—'}</td>
-              <td>${stats.retornoBasalPct!==null?stats.retornoBasalPct.toFixed(0)+'%':'—'}</td>
-              <td>${stats.pctAlvo.toFixed(0)}%</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      ` : `<div class="empty">Nenhuma curva glicêmica completa iniciada neste mês.</div>`}
-      <div id="mensal-obs" style="margin-top:14px"></div>
-    `;
+    content.innerHTML = `<div class="empty">Sem lançamentos com glicemia neste mês.</div><div id="mensal-obs" style="margin-top:14px"></div>`;
     renderSinaisObservacoes('mensal-obs', listaCompleta);
-    window._mensalReportData = { key, lista, listaCompleta, s:null, sPrev:null, curvasDoMes };
     return;
   }
 
@@ -2054,12 +1946,8 @@ function renderMensal(){
       <div class="stat"><div class="val">${doseKgMedia!==null ? doseKgMedia.toFixed(2) : '—'}</div><div class="lbl">dose média (UI/kg)</div></div>
       <div class="stat"><div class="val">${diasComRegistro}/${totalDias}</div><div class="lbl">dias com registro</div></div>
       <div class="stat"><div class="val" style="color:${episodiosSomogyi.length?'var(--accent)':'inherit'}">${episodiosSomogyi.length}</div><div class="lbl">possíveis Somogyi</div></div>
-      <div class="stat"><div class="val">${s.mageRelativo!==null?s.mageRelativo.toFixed(0)+'%':'—'}</div><div class="lbl">MAGE relativo</div></div>
-      <div class="stat"><div class="val">${s.correlacaoDoseGlicemia!==null?s.correlacaoDoseGlicemia.toFixed(2):'—'}</div><div class="lbl">correlação dose × glicemia</div></div>
     </div>
     <div class="notice">${tendencia}${sPrev? ` (mês anterior: ${sPrev.media.toFixed(0)} mg/dL)`:''}</div>
-    <div class="notice" style="background:var(--primary-tint)"><strong>Correlação dose × glicemia</strong> vai de -1 a 1: valores bem negativos indicam que doses maiores realmente resultam em glicemias mais baixas; perto de 0 sugere que outros fatores (alimentação, estresse, atividade física) estão influenciando tanto quanto a insulina. A explicação do <strong>MAGE relativo</strong> está junto do gráfico logo abaixo.</div>
-    <div class="chart-wrap"><canvas id="chart-mage" height="220"></canvas></div>
 
     <div class="two-col">
       <div>
@@ -2096,23 +1984,6 @@ function renderMensal(){
       <div class="notice" style="background:var(--accent-tint);color:#8a5c14">O app identifica automaticamente esse padrão a cada lançamento. Neste mês, ${episodiosSomogyi.length} leitura(s) alta(s) vieram logo depois de uma glicemia baixa — vale revisar com a veterinária antes de considerar aumentar a dose.</div>
       <ul class="top-episodes">${episodiosSomogyi.map(r=>`<li><span>${fmtDate(r.dataGlicemia)}</span><span class="mono" style="color:var(--accent)">${r.glicemia} mg/dL (rebote)</span></li>`).join('')}</ul>
     ` : `<div class="notice">O app monitora automaticamente esse padrão a cada lançamento. Nenhum episódio identificado neste mês.</div>`}
-
-    <h3>Curvas glicêmicas do mês</h3>
-    ${curvasDoMes.length ? `
-      <table>
-        <thead><tr><th>Data</th><th>Dose/Tipo</th><th>Nadir medido</th><th>Nadir estimado</th><th>Retorno ao basal</th><th>Tempo no alvo</th></tr></thead>
-        <tbody>${curvasDoMes.map(({curva,stats})=>`
-          <tr>
-            <td>${new Date(curva.inicio).toLocaleDateString('pt-BR')}</td>
-            <td>${curva.insulinaDose||'—'} UI ${curva.insulinaTipo||''}</td>
-            <td>${stats.medido.glicemia} mg/dL</td>
-            <td>${stats.estimado!==null?stats.estimado.toFixed(0)+' mg/dL':'—'}</td>
-            <td>${stats.retornoBasalPct!==null?stats.retornoBasalPct.toFixed(0)+'%':'—'}</td>
-            <td>${stats.pctAlvo.toFixed(0)}%</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    ` : `<div class="empty">Nenhuma curva glicêmica completa iniciada neste mês.</div>`}
 
     <h3>Sinais clínicos, atividade física e observações avulsas</h3>
     <div id="mensal-obs"></div>
@@ -2157,9 +2028,7 @@ function renderMensal(){
   });
 
   // guarda tudo que o relatório em PDF vai precisar, sem recalcular
-  window._mensalReportData = { key, lista, listaCompleta, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia, curvasDoMes };
-
-  renderGraficoMAGE('chart-mage', lista);
+  window._mensalReportData = { key, lista, listaCompleta, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia };
 }
 function renderObsVetLista(key){
   const el = document.getElementById('obs-vet-lista');
@@ -2206,7 +2075,7 @@ async function adicionarObsVet(key){
 async function exportarPDF(){
   const d = window._mensalReportData;
   if(!d){ await customAlert('Abra o relatório mensal antes de exportar.'); return; }
-  const { key, lista, listaCompleta, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia, curvasDoMes } = d;
+  const { key, lista, listaCompleta, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia } = d;
   const docObs = await db.collection('relatoriosMensais').doc(key).get();
   const obs = (docObs.exists && docObs.data().observacoes) || [];
 
@@ -2346,23 +2215,13 @@ async function exportarPDF(){
     ['Dias com registro', `${diasComRegistro} de ${totalDias}`],
     ['Faixa alvo configurada', `${configParam.alvoMin}–${configParam.alvoMax} mg/dL`],
     ['Possíveis episódios de efeito Somogyi', String(episodiosSomogyi.length)],
-    ['MAGE relativo (variabilidade)', s.mageRelativo!==null ? s.mageRelativo.toFixed(0)+'%' : '—'],
-    ['Correlação dose × glicemia (Pearson)', s.correlacaoDoseGlicemia!==null ? s.correlacaoDoseGlicemia.toFixed(2) : '—'],
   ], [280, CONTENT_W-280]);
   paragrafo(`Tendência: ${tendencia.replace('▲','sobiu').replace('▼','caiu').replace('=','estável')}${sPrev? ` (média do mês anterior: ${sPrev.media.toFixed(0)} mg/dL)`:''}.`);
-  paragrafo('Correlação dose × glicemia vai de -1 a 1: valores bem negativos indicam que doses maiores realmente resultam em glicemias mais baixas; perto de 0 sugere que outros fatores (alimentação, estresse, atividade física) estão influenciando tanto quanto a insulina. A explicação do MAGE relativo está junto do gráfico correspondente, mais adiante neste relatório.');
 
   // ---------- GRÁFICOS ----------
   secao('Evolução da glicemia no mês');
   imagemGrafico('chart-mensal-linha', 'Glicemia ao longo do mês, com linha de tendência (regressão linear).');
   imagemGrafico('chart-mensal-scatter', 'Relação entre a dose de insulina aplicada e a glicemia resultante.');
-
-  secao('Variabilidade glicêmica (MAGE)');
-  if(lista.length >= 3){
-    imagemGrafico('chart-mage', 'Pontos de virada (picos e vales) usados no cálculo do MAGE, conectados em vermelho — mesmo padrão visual usado em ferramentas clínicas de referência (MAGECAA, iglu).');
-  } else {
-    paragrafo('Dados insuficientes neste mês para calcular e visualizar o MAGE (mínimo de 3 leituras de glicemia).');
-  }
 
   // ---------- DISTRIBUIÇÃO POR HORÁRIO ----------
   secao('Distribuição por horário do dia');
@@ -2381,50 +2240,6 @@ async function exportarPDF(){
     tabela([['Data/hora','Glicemia (rebote)'], ...episodiosSomogyi.map(r=>[fmtDate(r.dataGlicemia), `${r.glicemia} mg/dL`])], [CONTENT_W-140,140]);
   } else {
     paragrafo('O app monitora automaticamente esse padrão a cada lançamento. Nenhum episódio identificado neste mês.');
-  }
-
-  // ---------- CURVAS GLICÊMICAS DO MÊS ----------
-  secao('Curvas glicêmicas do mês');
-  if(curvasDoMes.length){
-    tabela([
-      ['Data','Dose/Tipo','Nadir medido','Nadir estimado','Retorno ao basal','Tempo no alvo'],
-      ...curvasDoMes.map(({curva,stats})=>[
-        new Date(curva.inicio).toLocaleDateString('pt-BR'),
-        `${curva.insulinaDose||'—'} UI ${curva.insulinaTipo||''}`,
-        `${stats.medido.glicemia} mg/dL`,
-        stats.estimado!==null?`${stats.estimado.toFixed(0)} mg/dL`:'—',
-        stats.retornoBasalPct!==null?`${stats.retornoBasalPct.toFixed(0)}%`:'—',
-        `${stats.pctAlvo.toFixed(0)}%`
-      ])
-    ], [70, 90, 100, 100, 100, CONTENT_W-460]);
-
-    // gráfico completo só das últimas 2-3 curvas, pra não deixar o PDF gigante em meses com muitas curvas
-    const ultimasCurvas = curvasDoMes.slice(-3);
-    for(const {curva, stats} of ultimasCurvas){
-      const canvasTemp = document.createElement('canvas');
-      canvasTemp.width = 700; canvasTemp.height = 280;
-      canvasTemp.style.position = 'fixed'; canvasTemp.style.left = '-9999px'; canvasTemp.style.top = '0';
-      document.body.appendChild(canvasTemp);
-      const chartTemp = new Chart(canvasTemp.getContext('2d'), {
-        type:'line',
-        data:{ labels: stats.pontos.map(pt=> new Date(pt.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})),
-          datasets:[..._datasetsFaixaAlvo(stats.pontos.length), { label:'Glicemia', data: stats.pontos.map(pt=>pt.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.25, pointRadius:3 }] },
-        options:{ responsive:false, animation:false, plugins:{legend:{display:false}, title:{display:true,text:`Curva de ${new Date(curva.inicio).toLocaleDateString('pt-BR')} — ${curva.insulinaDose||'—'} UI ${curva.insulinaTipo||''}`}} }
-      });
-      await new Promise(r=>setTimeout(r,60));
-      const ratio = canvasTemp.height/canvasTemp.width;
-      const w = CONTENT_W, h = w*ratio;
-      garantirEspaco(h+16);
-      pdf.addImage(canvasTemp.toDataURL('image/png',1.0), 'PNG', MARGIN, y, w, h);
-      y += h + 16;
-      chartTemp.destroy();
-      document.body.removeChild(canvasTemp);
-    }
-    if(curvasDoMes.length > 3){
-      paragrafo(`Mostrando o gráfico completo apenas das ${ultimasCurvas.length} curvas mais recentes do mês (${curvasDoMes.length} no total) — as demais estão na tabela acima.`);
-    }
-  } else {
-    paragrafo('Nenhuma curva glicêmica completa iniciada neste mês.');
   }
 
   // ---------- SINAIS CLÍNICOS, ATIVIDADE FÍSICA E OBSERVAÇÕES AVULSAS ----------
