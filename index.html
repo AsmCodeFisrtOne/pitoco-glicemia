@@ -156,6 +156,17 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
   border-radius:0;z-index:1001;padding:16px;
   box-shadow:none;cursor:zoom-out;margin:0;
 }
+/* Desktop/notebook (mouse de verdade, não touch): em vez de esticar pra tela toda — que fica
+   quadrado/estranho conforme o formato da janela — usa uma caixa central com proporção fixa
+   16:9 (parecida com a proporção que já fica boa no celular em paisagem). */
+@media (hover: hover) and (pointer: fine){
+  .chart-expandivel.expandido{
+    inset:auto; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(92vw, calc(92vh * 16 / 9));
+    height:min(92vh, calc(92vw * 9 / 16));
+    border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.35);
+  }
+}
 .chart-expandivel::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
 .chart-expandivel.expandido::after{content:"🔍 toque 2x para fechar";right:16px;bottom:16px;}
 .chart-overlay-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;}
@@ -828,7 +839,12 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev007.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev007.1"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev007.1: gráfico expandido no desktop/notebook (detectado via @media(hover:hover) and
+// (pointer:fine), que identifica mouse de verdade em vez de touchscreen) agora usa uma caixa
+// central com proporção fixa 16:9, em vez de esticar pra 100vw/100dvh — no PC isso ficava
+// quadrado/estranho dependendo do formato da janela. No celular (touch) nada mudou, continua
+// cobrindo a tela inteira como já estava bom.
 // Rev007.0: nova estratégia pra orientação — em vez de tentar (sem sucesso, por exigir toque
 // real do usuário) reconquistar a trava de paisagem sozinho depois que o sistema a derruba
 // (ex: ao trocar de app), o app agora MONITORA a orientação real da tela enquanto alguém está
