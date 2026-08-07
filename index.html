@@ -94,6 +94,8 @@ textarea{resize:vertical;min-height:56px;}
 .btn.secondary:hover{background:var(--line);}
 .btn.danger{background:var(--danger-tint);color:var(--danger);}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.btn-row-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;}
+.btn-row-2col .btn{width:100%;}
 
 /* Range gauge - signature element */
 .gauge{position:relative;height:34px;border-radius:999px;background:linear-gradient(to right,
@@ -263,6 +265,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
     <button data-tab="config">Configurações</button>
     <button data-tab="exames">Exames</button>
     <button data-tab="manual">Manual</button>
+    <button data-tab="correcao" id="tab-btn-correcao" style="display:none">⚠️ Correção</button>
   </nav>
 
   <!-- ---------- LANÇAR ---------- -->
@@ -414,7 +417,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
         <label style="margin:0">Mês:</label>
         <select id="mensal-select" onchange="renderMensal()"></select>
       </div>
-      <div class="btn-row">
+      <div class="btn-row-2col">
         <button class="btn secondary" id="btn-exportar-pdf" onclick="exportarPDF()">Exportar PDF</button>
         <button class="btn secondary" id="btn-exportar-planilha" onclick="exportarPlanilha()">Exportar planilha</button>
       </div>
@@ -691,6 +694,34 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       <div class="notice">Esses recursos são apoios de leitura dos dados, não diagnósticos — servem para levar padrões observados para a conversa com a veterinária, não para substituir a avaliação clínica dela.</div>
     </div>
   </section>
+
+  <!-- ---------- CORREÇÃO (acesso restrito: profissional de saúde / Engenharia) ---------- -->
+  <section class="panel" id="tab-correcao">
+    <div class="card">
+      <h2 style="color:var(--danger)">⚠️ Correção de insulina por glicemia pontual</h2>
+      <div class="notice" style="border-color:var(--danger)">
+        Esta aba só aparece nos acessos de <strong>profissional de saúde</strong> e <strong>Engenharia</strong> — o tutor não tem acesso a ela e não vê este botão.
+      </div>
+      <p style="font-size:13.5px">
+        Em cães, ao contrário de humanos, o protocolo padrão usa insulina de ação intermediária em dose fixa 2x/dia,
+        ajustada apenas por curva glicêmica completa (não por correção pontual). Aplicar uma dose extra de insulina
+        rápida em cima da dose basal já aplicada tem risco real de <strong>empilhamento de insulina</strong>
+        (<em>stacking</em>) e hipoglicemia grave — inclusive as próprias fontes que descrevem essa prática em cães/gatos
+        a tratam como avançada, de nicho, e arriscada mesmo pra quem tem experiência.
+      </p>
+      <p style="font-size:13.5px">
+        Por isso, esta calculadora <strong>ainda não tem uma fórmula implementada</strong>. Ela só vai ficar ativa
+        depois que a veterinária do <span class="nome-pet-dinamico">Pitoco</span> definir, especificamente pra ele:
+      </p>
+      <ul style="font-size:13.5px;line-height:1.7">
+        <li>o fator de sensibilidade (ou tabela de referência) a ser usado;</li>
+        <li>a dose máxima permitida por correção;</li>
+        <li>o intervalo mínimo desde a última aplicação de insulina basal para liberar uma correção;</li>
+        <li>em quais situações a correção é autorizada (ex: só com curva em andamento, só acima de determinado valor).</li>
+      </ul>
+      <div class="notice">🔒 Calculadora pendente — aguardando protocolo da veterinária. Assim que ela definir os parâmetros acima, a lógica de cálculo é implementada aqui.</div>
+    </div>
+  </section>
 </div>
   <!-- ---------- MODAL CUSTOMIZADO ---------- -->
   <div id="custom-modal-overlay">
@@ -710,7 +741,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev005.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev005.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 // Rev004.8: adicionado painel "🧪 Modo debug" em Configurações para simular o lembrete semanal
 // de medição pós-insulina sem precisar esperar segunda-feira / 6h reais (ver seção DEBUG LEMBRETE).
 // Rev004.9: 3º nível de acesso "Engenharia" (senha fixa no código, não fica no Firestore e não
@@ -719,6 +750,14 @@ const APP_VERSION = "Beta_Rev005.0"; // formato correto: a cada +0.1, ao passar 
 // acessos de profissional de saúde / Engenharia — o badge de acesso agora entra dentro da
 // div.id (junto do logo/nome), e não mais como 3º filho direto do header (que tem
 // justify-content:space-between com só 2 filhos esperados).
+// Rev005.1: corrige alinhamento dos botões "Exportar PDF" / "Exportar planilha" no Relatório
+// mensal — antes tinham larguras diferentes (auto, conforme o texto) e não batiam com as
+// colunas do grid de estatísticas logo abaixo. Agora usam .btn-row-2col (grid 1fr 1fr).
+// Rev005.2: nova aba "⚠️ Correção" (correção de insulina por glicemia pontual), visível
+// apenas nos acessos de profissional de saúde e Engenharia (tutor não vê o botão nem
+// consegue abrir a aba). Calculadora ainda sem fórmula — aguardando protocolo específico
+// definido pela veterinária do Pitoco (fator de sensibilidade, dose máxima, intervalo
+// mínimo desde a última insulina, condições de uso). Ver notas de segurança na própria aba.
 const SENHA_ENGENHARIA = "Primos@235711"; // acesso de Engenharia — fixa no código de propósito (não é a senha do tutor nem a da veterinária)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
@@ -913,6 +952,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 /* ---------------- TABS ---------------- */
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
+    if(btn.dataset.tab==='correcao' && modoAcesso!=='veterinaria' && modoAcesso!=='engenharia') return; // trava extra além do botão escondido
     document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
@@ -944,6 +984,9 @@ function aplicarModoAcesso(){
   // painel de debug do lembrete só aparece no acesso de Engenharia
   const painelDebug = document.getElementById('card-debug-lembrete');
   if(painelDebug) painelDebug.style.display = (modoAcesso === 'engenharia') ? '' : 'none';
+  // aba de correção de insulina só aparece pra profissional de saúde e Engenharia — tutor não vê
+  const btnCorrecao = document.getElementById('tab-btn-correcao');
+  if(btnCorrecao) btnCorrecao.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
 }
 function initApp(){
   const now = new Date();
