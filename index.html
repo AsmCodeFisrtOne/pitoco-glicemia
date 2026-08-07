@@ -256,6 +256,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
   </header>
 
   <nav class="tabs">
+    <button data-tab="hipoglicemia" id="tab-btn-hipoglicemia" style="color:var(--danger)">🆘 Hipoglicemia</button>
     <button data-tab="lancar" class="active">Lançar</button>
     <button data-tab="registros">Registros</button>
     <button data-tab="curva">Curva glicêmica</button>
@@ -267,6 +268,46 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
     <button data-tab="manual">Manual</button>
     <button data-tab="correcao" id="tab-btn-correcao" style="display:none">⚠️ Correção</button>
   </nav>
+
+  <!-- ---------- HIPOGLICEMIA (acesso: todos) ---------- -->
+  <section class="panel" id="tab-hipoglicemia">
+    <div class="card" style="border:2px solid var(--danger)">
+      <h2 style="color:var(--danger)">🆘 O que fazer em caso de hipoglicemia</h2>
+      <div class="notice" style="border-color:var(--danger)">
+        Hipoglicemia (açúcar baixo demais) é uma emergência que pode evoluir rápido. Em caso de dúvida, aja primeiro e
+        ligue para a veterinária em seguida — não espere confirmação para agir.
+      </div>
+
+      <h3>1) Reconheça os sinais</h3>
+      <p style="font-size:13.5px">Fome intensa, fraqueza, tremores, andar cambaleante, desorientação, ou convulsão.</p>
+
+      <h3>2) Aja imediatamente, conforme a resposta do <span class="nome-pet-dinamico">Pitoco</span></h3>
+      <ul style="font-size:13.5px;line-height:1.8">
+        <li><strong>Consciente e consegue comer:</strong> ofereça uma refeição rica em carboidrato de absorção rápida (arroz, pão, ração com um pouco de xarope de milho/Karo ou mel).</li>
+        <li><strong>Muito fraco/tremendo, mas ainda consegue engolir:</strong> esfregue 1-2 colheres de chá de xarope de milho (Karo) ou mel diretamente na gengiva.</li>
+        <li><strong>Pouco responsivo ou desmaiado:</strong> não tente forçar nada por via oral (risco de engasgo/aspiração) — vá direto para atendimento veterinário de emergência.</li>
+        <li><strong>Se respondeu em ~5 minutos</strong> ao açúcar de emergência: continue oferecendo pequenas porções de comida a cada 1-2h até o efeito da insulina passar.</li>
+      </ul>
+
+      <h3>3) Depois do episódio</h3>
+      <ul style="font-size:13.5px;line-height:1.8">
+        <li>Você pode <strong>reduzir ou pular a próxima dose de insulina</strong> com segurança por conta própria — isso é considerado seguro sem precisar esperar autorização.</li>
+        <li><strong>Nunca aumente</strong> a dose ou a frequência de insulina sem instrução direta da veterinária.</li>
+        <li>Se a hipoglicemia foi causada por dose alta, a literatura costuma indicar reduzir a próxima dose em pelo menos 10% e refazer uma curva glicêmica para reajustar — mas confirme esse número com a veterinária antes de fixar a mudança.</li>
+      </ul>
+
+      <h3>4) Sempre procure a veterinária se:</h3>
+      <ul style="font-size:13.5px;line-height:1.8">
+        <li>Houve convulsão;</li>
+        <li>Não houve resposta em poucos minutos ao açúcar de emergência;</li>
+        <li>Os sinais voltarem depois de melhorar;</li>
+        <li>Você não tem certeza do que está vendo — é sempre mais seguro procurar ajuda do que esperar.</li>
+      </ul>
+
+      <div class="notice">Este conteúdo é baseado em orientações gerais de fabricantes e diretrizes veterinárias — não substitui uma avaliação clínica. Em qualquer emergência, o passo mais seguro é sempre contatar a veterinária ou um hospital veterinário 24h.</div>
+      <button class="btn" onclick="document.querySelector('[data-tab=&quot;lancar&quot;]').click()">📝 Registrar este episódio agora</button>
+    </div>
+  </section>
 
   <!-- ---------- LANÇAR ---------- -->
   <section class="panel active" id="tab-lancar">
@@ -741,7 +782,13 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev005.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev005.3"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev005.3: nova aba "🆘 Hipoglicemia", visível para TODOS os acessos (tutor, profissional
+// de saúde, Engenharia) — é a primeira aba da barra, com protocolo de reconhecimento de
+// sinais e resposta imediata baseado em orientações de fabricante/diretrizes veterinárias.
+// Diferente da aba "⚠️ Correção" (que fica restrita e ainda pendente), esta não sugere
+// nenhuma dose de insulina — só orienta ação com açúcar/comida e quando procurar a
+// veterinária, por isso é seguro deixar disponível pro tutor.
 // Rev004.8: adicionado painel "🧪 Modo debug" em Configurações para simular o lembrete semanal
 // de medição pós-insulina sem precisar esperar segunda-feira / 6h reais (ver seção DEBUG LEMBRETE).
 // Rev004.9: 3º nível de acesso "Engenharia" (senha fixa no código, não fica no Firestore e não
