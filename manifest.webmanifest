@@ -4,7 +4,7 @@
   "description": "Controle glicêmico do Pitoco",
   "start_url": "./index.html",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#14363b",
   "theme_color": "#1D4E4E",
   "orientation": "landscape",

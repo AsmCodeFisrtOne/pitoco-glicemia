@@ -835,7 +835,15 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev006.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev006.3"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev006.3: nova tentativa de fullscreen + paisagem, dessa vez pedindo fullscreen pro
+// document.documentElement (o <html> inteiro) em vez de um <div> específico com CSS próprio
+// (position:fixed/transform), que foi o que quebrou o layout na Rev006.0. Como o <html>/<body>
+// não têm nenhum position/transform especial, o fullscreen não deve mais bagunçar o tamanho
+// da tela. manifest.webmanifest também mudou "display" de "standalone" para "fullscreen",
+// pra pedir tela cheia nativa direto quando aberto pelo ícone instalado. Acionado no login
+// (as 3 senhas), na sessão já autenticada ao reabrir, e desfeito (sai do fullscreen + destrava
+// orientação) no Logoff e no botão Sair da tela de login.
 // Rev006.2: força modo paisagem ao entrar no app (login bem-sucedido, sessão já autenticada
 // ao reabrir, e uma tentativa early assim que o script carrega) e destrava ao sair (Logoff
 // ou botão Sair na tela de login), via Screen Orientation API (screen.orientation.lock/
@@ -1185,7 +1193,7 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','completo');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    _travarPaisagem();
+    _entrarFullscreenPaisagem();
     initApp();
   } else if(senhaVet && v === senhaVet){
     modoAcesso = 'veterinaria';
@@ -1193,7 +1201,7 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','veterinaria');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    _travarPaisagem();
+    _entrarFullscreenPaisagem();
     initApp();
   } else if(v === SENHA_ENGENHARIA){
     modoAcesso = 'engenharia';
@@ -1201,7 +1209,7 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','engenharia');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    _travarPaisagem();
+    _entrarFullscreenPaisagem();
     initApp();
   } else {
     document.getElementById('gate-err').textContent = 'Senha incorreta.';
@@ -1213,20 +1221,35 @@ async function tryLogin(){
    comum ou no iOS Safari, a Screen Orientation API costuma recusar sem fullscreen — nesses
    casos a chamada falha silenciosamente (catch vazio) e o app segue funcionando normal, só
    sem forçar a rotação. */
-function _travarPaisagem(){
-  if(screen.orientation && screen.orientation.lock){
-    screen.orientation.lock('landscape').catch(()=>{});
+/* ---------------- ORIENTAÇÃO: fullscreen + paisagem na página INTEIRA (document.documentElement) ----------------
+   Diferente da tentativa anterior (que dava fullscreen num <div> específico, dentro do fluxo
+   normal da página, e por isso conflitava com o CSS dele) — aqui o fullscreen é pedido pro
+   <html> inteiro, que não tem nenhum position/transform especial, então o app continua
+   renderizando normal, só que ocupando a tela toda e sem a barra do navegador. */
+function _entrarFullscreenPaisagem(){
+  const el = document.documentElement;
+  if(el.requestFullscreen){
+    el.requestFullscreen().then(()=>{
+      if(screen.orientation && screen.orientation.lock){
+        screen.orientation.lock('landscape').catch(()=>{});
+      }
+    }).catch(()=>{});
+  } else if(screen.orientation && screen.orientation.lock){
+    screen.orientation.lock('landscape').catch(()=>{}); // sem suporte a fullscreen — tenta só a orientação mesmo assim
   }
 }
-function _destravarPaisagem(){
+function _sairFullscreenPaisagem(){
   if(screen.orientation && screen.orientation.unlock){
     try{ screen.orientation.unlock(); }catch(e){}
   }
+  if(document.fullscreenElement){
+    document.exitFullscreen().catch(()=>{});
+  }
 }
-_travarPaisagem(); // tentativa early, assim que o script carrega
+_entrarFullscreenPaisagem(); // tentativa early, assim que o script carrega (funciona se já veio de um gesto do usuário, ex: tocar no ícone do app)
 
 function logout(){
-  _destravarPaisagem();
+  _sairFullscreenPaisagem();
   sessionStorage.removeItem('pitoco_auth');
   sessionStorage.removeItem('pitoco_modo');
   location.reload();
@@ -1236,7 +1259,7 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   window.addEventListener('DOMContentLoaded', initApp);
-  window.addEventListener('DOMContentLoaded', _travarPaisagem);
+  window.addEventListener('DOMContentLoaded', _entrarFullscreenPaisagem);
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 document.getElementById('gate-version').textContent = APP_VERSION;
@@ -1614,7 +1637,7 @@ function curvaAtiva(){ return curvas.find(c=>!c.finalizada); }
 
 /* ---------------- TELA DE LOGIN: botão Sair (fecha o app/aba) ---------------- */
 function fecharApp(){
-  _destravarPaisagem();
+  _sairFullscreenPaisagem();
   window.close();
   // window.close() só funciona se a aba/janela foi aberta por script (ou em alguns PWAs
   // instalados). Se não fechar (a maioria dos casos no navegador comum), avisa o usuário.
