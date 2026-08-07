@@ -457,7 +457,7 @@ if ('serviceWorker' in navigator) {
     <div class="card">
       <h2>Últimos 7 dias</h2>
       <div id="semanal-stats" class="stats"></div>
-      <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, semanalChart, event)"><canvas id="chart-semanal" height="180"></canvas></div>
+      <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, semanalChart, event, renderSemanal)"><canvas id="chart-semanal" height="180"></canvas></div>
     </div>
     <div class="card">
       <h2>Sinais clínicos, atividade física e observações</h2>
@@ -828,7 +828,17 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev006.6"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev006.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev006.7: (1) restaurada a chamada a document.requestFullscreen() antes do lock de
+// orientação — sem ela, o lock não pegava de verdade na prática, mesmo com "display":
+// "fullscreen" no manifest. O aviso nativo do Android sobre tela cheia volta a aparecer (é
+// um recurso de segurança do sistema, não dá pra desligar via código da página — ele some
+// sozinho depois de alguns segundos). (2) Corrigido de vez o bug do gráfico "esticado" no
+// Relatório mensal (e agora também no semanal): em vez de só chamar resize() no Chart.js
+// existente, o fechamento do zoom agora RECRIA o gráfico do zero (chama renderSemanal() /
+// renderMensal() de novo, que destroem e recriam o Chart.js), igual ao que já acontecia ao
+// trocar de aba manualmente — método mais garantido, já que a nova instância mede o
+// container só depois dele já ter voltado ao tamanho normal.
 // Rev006.6: (1) fechar o gráfico expandido agora exige DUPLO clique/toque no mesmo lugar
 // (checando event.detail>=2) — um único toque enquanto expandido não faz mais nada, evita
 // fechar sem querer. Clicar fora (no fundo escurecido) continua fechando com um toque só.
@@ -1236,20 +1246,31 @@ async function tryLogin(){
     document.getElementById('gate-err').textContent = 'Senha incorreta.';
   }
 }
-/* ---------------- ORIENTAÇÃO: paisagem, sem chamar a Fullscreen API do JS ----------------
-   O manifest.webmanifest já pede "display":"fullscreen", que faz o Android abrir o app
-   instalado em tela cheia nativa sozinho, sem barra do navegador. Chamar document.
-   requestFullscreen() aqui EM CIMA disso é redundante e foi o que disparava aquele aviso
-   nativo "app em tela cheia, deslize/aperte X para sair" — removido. Sobra só o lock de
-   orientação, que funciona no contexto de PWA instalado sem precisar de fullscreen via JS. */
+/* ---------------- ORIENTAÇÃO: fullscreen (JS) + paisagem ----------------
+   Testado na prática: sem chamar document.requestFullscreen() explicitamente, o lock de
+   orientação não pega de verdade (mesmo com "display":"fullscreen" no manifest) — então essa
+   chamada volta. O aviso nativo do Android ("app em tela cheia, deslize pra sair") é um
+   recurso de segurança do próprio sistema/navegador pra garantir que ninguém fique "preso"
+   em tela cheia sem saber como sair — não tem como desligar isso via código da página; ele
+   normalmente aparece só de relance ao entrar e some sozinho. */
 function _entrarFullscreenPaisagem(){
-  if(screen.orientation && screen.orientation.lock){
+  const el = document.documentElement;
+  if(el.requestFullscreen){
+    el.requestFullscreen().then(()=>{
+      if(screen.orientation && screen.orientation.lock){
+        screen.orientation.lock('landscape').catch(()=>{});
+      }
+    }).catch(()=>{});
+  } else if(screen.orientation && screen.orientation.lock){
     screen.orientation.lock('landscape').catch(()=>{});
   }
 }
 function _sairFullscreenPaisagem(){
   if(screen.orientation && screen.orientation.unlock){
     try{ screen.orientation.unlock(); }catch(e){}
+  }
+  if(document.fullscreenElement){
+    document.exitFullscreen().catch(()=>{});
   }
 }
 _entrarFullscreenPaisagem(); // tentativa early, assim que o script carrega (funciona se já veio de um gesto do usuário, ex: tocar no ícone do app)
@@ -1657,29 +1678,32 @@ function fecharApp(){
    bagunçava o tamanho da tela em vários aparelhos — revertido. Agora é só um overlay CSS
    position:fixed centralizado (ver .chart-expandivel.expandido), sem mexer em
    fullscreen/orientação do navegador. */
-function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir){
+function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderFn){
   wrapEl.classList.toggle('expandido', expandir);
   const backdrop = document.getElementById('chart-overlay-backdrop');
   if(backdrop){
     backdrop.classList.toggle('ativo', expandir);
-    backdrop.onclick = expandir ? (()=> _aplicarEstadoChartExpandido(wrapEl, chartInstance, false)) : null;
+    backdrop.onclick = expandir ? (()=> _aplicarEstadoChartExpandido(wrapEl, chartInstance, false, rerenderFn)) : null;
   }
-  if(chartInstance){
-    void wrapEl.offsetHeight; // força reflow síncrono ANTES de medir — sem isso o Chart.js às vezes
-    // ainda enxergava o tamanho anterior (expandido) no momento do resize() e "herdava" esse
-    // tamanho no canvas mesmo depois do container já ter voltado ao normal (o bug do gráfico
-    // "esticado" no Relatório mensal, que só sumia trocando de aba e recriando o gráfico do zero).
+  void wrapEl.offsetHeight; // força reflow síncrono antes de medir/recriar
+  if(rerenderFn){
+    // recria o gráfico DO ZERO (destrói e cria de novo), igual acontece ao trocar de aba —
+    // é o jeito mais garantido de acertar o tamanho, já que só chamar resize() não resolvia
+    // sempre (o Chart.js às vezes "herdava" o tamanho anterior mesmo com o container já
+    // voltado ao normal).
+    setTimeout(()=> rerenderFn(), 60);
+  } else if(chartInstance){
     chartInstance.resize();
     setTimeout(()=> chartInstance.resize(), 150);
   }
 }
-function toggleChartExpandido(wrapEl, chartInstance, evt){
+function toggleChartExpandido(wrapEl, chartInstance, evt, rerenderFn){
   const jaExpandido = wrapEl.classList.contains('expandido');
   if(jaExpandido){
     if(!evt || evt.detail < 2) return; // enquanto expandido, só fecha com DUPLO clique no mesmo lugar
-    _aplicarEstadoChartExpandido(wrapEl, chartInstance, false);
+    _aplicarEstadoChartExpandido(wrapEl, chartInstance, false, rerenderFn);
   } else {
-    _aplicarEstadoChartExpandido(wrapEl, chartInstance, true);
+    _aplicarEstadoChartExpandido(wrapEl, chartInstance, true, rerenderFn);
   }
 }
 function renderCurvaTab(){
@@ -2652,7 +2676,7 @@ function renderMensal(){
           <button class="btn secondary" id="btn-view-diario" onclick="setChartView('diario')" style="font-size:12px;padding:6px 10px">Média diária</button>
           <button class="btn secondary" id="btn-view-bruto" onclick="setChartView('bruto')" style="font-size:12px;padding:6px 10px">Cada leitura</button>
         </div>
-        <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, mensalChart1, event)"><canvas id="chart-mensal-linha" height="200"></canvas></div>
+        <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, mensalChart1, event, ()=>{ populateMesSelect(); renderMensal(); })"><canvas id="chart-mensal-linha" height="200"></canvas></div>
       </div>
       <div class="chart-wrap"><canvas id="chart-mensal-scatter" height="200"></canvas></div>
     </div>
