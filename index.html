@@ -150,6 +150,11 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
 .pill.alvo{background:var(--target-tint);color:var(--target);}
 
 .chart-wrap{background:var(--surface);border-radius:10px;padding:10px 6px;margin:14px 0;position:relative;height:220px;}
+.chart-wrap-curva{height:220px;cursor:zoom-in;transition:height .25s ease;}
+.chart-wrap-curva.expandido{height:380px;cursor:zoom-out;}
+@media (min-width: 640px){.chart-wrap-curva.expandido{height:460px;}}
+.chart-wrap-curva::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
+.chart-wrap-curva.expandido::after{content:"🔍 toque para reduzir";}
 .chart-wrap canvas{max-height:100%;}
 .empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
 .two-col{display:grid;grid-template-columns:1fr;gap:16px;}
@@ -816,7 +821,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev005.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev005.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev005.7: gráfico da Curva glicêmica volta ao tamanho padrão (220px) e agora expande ao
+// tocar/clicar nele (380px mobile / 460px telas ≥640px) — toque de novo pra reduzir. Dica
+// "🔍 toque para ampliar/reduzir" no canto do gráfico. Vale pros dois gráficos da aba
+// (curva em andamento e resultado final).
+// Rev005.6: gráfico da Curva glicêmica (tanto "curva em andamento" quanto o resultado final)
+// aumentado — nova classe .chart-wrap-curva (360px mobile / 420px telas ≥640px), aplicada só
+// nesses dois gráficos. Os gráficos de relatório semanal/mensal continuam no tamanho de sempre.
 // Rev005.5: (1) texto automático do registro de hipoglicemia encurtado ("Episódio de
 // hipoglicemia (registro rápido) — edite para detalhar."). (2) botão "Sair" renomeado para
 // "Logoff". (3) badge de acesso (profissional de saúde / Engenharia) não quebra mais em 2
@@ -1526,6 +1538,11 @@ function computeCurvaStats(curva){
   };
 }
 function curvaAtiva(){ return curvas.find(c=>!c.finalizada); }
+function toggleChartExpandido(wrapEl, chartInstance){
+  wrapEl.classList.toggle('expandido');
+  // dá um tempinho pra transição de altura (CSS) terminar antes do Chart.js recalcular o canvas
+  setTimeout(()=>{ if(chartInstance) chartInstance.resize(); }, 260);
+}
 function renderCurvaTab(){
   const container = document.getElementById('curva-container');
   const ativa = curvaAtiva();
@@ -1567,7 +1584,7 @@ function renderCurvaTab(){
       <div class="card">
         <div class="curve-status"><span class="curve-dot"></span><h2 style="margin:0">Curva em andamento</h2></div>
         <div class="badge-complete">Iniciada em ${inicioFmt} · Insulina: ${ativa.insulinaDose||'—'} UI · ${ativa.insulinaTipo||''}</div>
-        <div class="chart-wrap" style="margin-top:14px"><canvas id="chart-curva-live"></canvas></div>
+        <div class="chart-wrap chart-wrap-curva" style="margin-top:14px" onclick="toggleChartExpandido(this, curvaChartLive)"><canvas id="chart-curva-live"></canvas></div>
         <h3>Pontos registrados</h3>
         <ul class="curve-points">${[...ativa.pontos].sort((a,b)=>new Date(a.horario)-new Date(b.horario)).map(p=>{
           const cls = classifica(p.glicemia);
@@ -1685,7 +1702,7 @@ function mostrarResultadoCurva(id){
     <h3>Retorno ao basal</h3>
     <p style="font-size:13px;color:var(--muted);margin-top:0">Compara a glicemia inicial (${stats.basal} mg/dL, antes da insulina) com a última leitura da curva (${stats.ultimaLeitura} mg/dL) — ajuda a ver se o efeito da insulina já passou perto da hora da próxima dose.</p>
     <div class="notice">${stats.retornoBasalPct===null ? 'Não foi possível calcular.' : stats.retornoBasalPct>=85 ? `A última leitura já voltou perto do valor basal (${stats.retornoBasalPct.toFixed(0)}% do inicial) — sugere que o efeito da insulina está acabando na hora certa.` : `A última leitura ainda está bem abaixo do basal (${stats.retornoBasalPct.toFixed(0)}% do inicial) — o efeito da insulina pode ainda estar ativo; considere comentar com a veterinária se isso se repetir.`}</div>
-    <div class="chart-wrap"><canvas id="chart-curva-resultado"></canvas></div>
+    <div class="chart-wrap chart-wrap-curva" onclick="toggleChartExpandido(this, curvaChartResultado)"><canvas id="chart-curva-resultado"></canvas></div>
     <button class="btn secondary" onclick="renderCurvaTab()">Fechar</button>
   `;
   container.innerHTML = '';
