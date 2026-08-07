@@ -537,6 +537,30 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       </p>
       <button class="btn danger" onclick="apagarObsVetFluxo()">Apagar todas as observações da veterinária</button>
     </div>
+    <div class="card" style="border:2px dashed #999">
+      <h2>🧪 Modo debug — Lembrete semanal de medição</h2>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">
+        Ferramenta temporária só pra testar o banner de lembrete (6h após a 1ª insulina do dia) sem precisar
+        esperar segunda-feira nem o horário real chegar. <strong>Tudo aqui roda só em memória, no seu navegador</strong> —
+        nada é gravado no banco de dados (Firestore), a não ser que o próprio fluxo do lembrete decida "avançar a semana"
+        sozinho durante o teste (nesse caso ele grava a nova data em <span class="mono">config/lembreteCurva</span>, igual
+        faria em produção). Recarregue a página (F5) ao terminar para descartar tudo.
+      </p>
+      <div class="notice" id="debug-status" style="font-family:monospace;font-size:12.5px">Status: —</div>
+      <div class="btn-row" style="margin:10px 0;flex-wrap:wrap">
+        <button class="btn secondary" onclick="debugInjetarInsulinaFake()">1) Injetar insulina fake (~6h30 atrás) e destravar a semana</button>
+        <button class="btn secondary" onclick="debugInjetarMedicaoNaJanela()">Adicionar medição fake dentro da janela</button>
+      </div>
+      <div class="field">
+        <label>Simular verificação em um horário específico</label>
+        <input type="datetime-local" id="debug-horario-simulado">
+      </div>
+      <div class="btn-row" style="flex-wrap:wrap">
+        <button class="btn" onclick="debugRodarComHorarioSimulado()">▶️ Rodar verificação nesse horário</button>
+        <button class="btn" onclick="debugRodarAgora()">✅ Rodar verificação com o horário real de agora</button>
+        <button class="btn danger" onclick="debugLimparTeste()">🔄 Limpar teste e recarregar a página</button>
+      </div>
+    </div>
   </section>
 
   <!-- ---------- MANUAL ---------- -->
@@ -686,7 +710,9 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev004.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev004.8: adicionado painel "🧪 Modo debug" em Configurações para simular o lembrete semanal
+// de medição pós-insulina sem precisar esperar segunda-feira / 6h reais (ver seção DEBUG LEMBRETE).
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -1420,6 +1446,78 @@ function _esconderBannerLembrete(){
   const banner = document.getElementById('banner-lembrete-medicao');
   if(banner) banner.remove();
 }
+
+/* ---------------- DEBUG: SIMULAÇÃO DO LEMBRETE SEMANAL (Rev004.8) ----------------
+   Painel em Configurações → "🧪 Modo debug" para testar o banner de lembrete sem
+   precisar esperar segunda-feira nem 6h reais. Tudo roda só em memória (não grava
+   no Firestore), exceto se o próprio fluxo natural do lembrete decidir "avançar a
+   semana" durante o teste — nesse caso ele grava normalmente em config/lembreteCurva,
+   igual faria em produção. Recarregar a página (F5) descarta tudo que foi injetado. */
+window._debugInsulinaFakeTime = null;
+
+function _debugAtualizarStatus(msg){
+  const el = document.getElementById('debug-status');
+  if(!el) return;
+  const bannerVisivel = document.getElementById('banner-lembrete-medicao') ? 'visível' : 'escondido';
+  const proxima = _lembreteState.proximaData || '(carregando...)';
+  el.textContent = `Status: proximaData=${proxima} | banner=${bannerVisivel}${msg ? ' | '+msg : ''}`;
+}
+
+function debugInjetarInsulinaFake(){
+  _lembreteState.proximaData = _dataYMD(new Date()); // destrava o portão semanal, só em memória
+  const insulinaFake = new Date(Date.now() - 6.5*3600000); // ~6h30 atrás -> cai dentro da janela 6h-7h
+  window._debugInsulinaFakeTime = insulinaFake;
+  registros.push({
+    _debugFake: true,
+    apenasObservacao: false,
+    insulinaDose: 1,
+    insulinaTipo: '(teste debug)',
+    dataInsulina: insulinaFake.toISOString(),
+    dataGlicemia: insulinaFake.toISOString(),
+    glicemia: null
+  });
+  const inp = document.getElementById('debug-horario-simulado');
+  if(inp && !inp.value) inp.value = toLocalInput(new Date());
+  verificarLembreteMedicao();
+  _debugAtualizarStatus('insulina fake injetada há ~6h30');
+}
+
+function debugInjetarMedicaoNaJanela(){
+  if(!window._debugInsulinaFakeTime){
+    alert('Primeiro clique em "Injetar insulina fake" (passo 1).');
+    return;
+  }
+  const dentroDaJanela = new Date(window._debugInsulinaFakeTime.getTime() + 6.5*3600000);
+  registros.push({
+    _debugFake: true,
+    apenasObservacao: false,
+    dataGlicemia: dentroDaJanela.toISOString(),
+    glicemia: 120
+  });
+  verificarLembreteMedicao();
+  _debugAtualizarStatus('medição fake adicionada dentro da janela');
+}
+
+function debugRodarComHorarioSimulado(){
+  const inp = document.getElementById('debug-horario-simulado');
+  if(!inp || !inp.value){ alert('Escolha um horário no campo acima.'); return; }
+  verificarLembreteMedicao(new Date(inp.value));
+  _debugAtualizarStatus('verificação rodada com horário simulado: ' + inp.value);
+}
+
+function debugRodarAgora(){
+  verificarLembreteMedicao();
+  _debugAtualizarStatus('verificação rodada com horário real');
+}
+
+function debugLimparTeste(){
+  location.reload();
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const inp = document.getElementById('debug-horario-simulado');
+  if(inp && !inp.value) inp.value = toLocalInput(new Date());
+});
 function toLocalInput(d){
   const pad = n=>String(n).padStart(2,'0');
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
