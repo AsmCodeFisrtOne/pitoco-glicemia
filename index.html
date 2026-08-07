@@ -828,7 +828,13 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev006.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev006.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev006.8: corrige o gráfico do Relatório mensal abrindo e fechando instantaneamente ao
+// clicar. Causa: a recriação do gráfico (rerenderFn) da Rev006.7 estava rodando tanto ao
+// ABRIR quanto ao FECHAR o zoom — e como renderMensal() reconstrói o card inteiro (inclusive
+// o próprio <div> do gráfico), isso apagava a classe "expandido" recém-aplicada ~60ms depois
+// de abrir, dando a impressão de abrir e fechar na hora. Agora só recria o gráfico ao FECHAR;
+// ao abrir, só chama resize() no gráfico já existente (como antes, sem recriar nada).
 // Rev006.7: (1) restaurada a chamada a document.requestFullscreen() antes do lock de
 // orientação — sem ela, o lock não pegava de verdade na prática, mesmo com "display":
 // "fullscreen" no manifest. O aviso nativo do Android sobre tela cheia volta a aparecer (é
@@ -1686,11 +1692,12 @@ function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderF
     backdrop.onclick = expandir ? (()=> _aplicarEstadoChartExpandido(wrapEl, chartInstance, false, rerenderFn)) : null;
   }
   void wrapEl.offsetHeight; // força reflow síncrono antes de medir/recriar
-  if(rerenderFn){
-    // recria o gráfico DO ZERO (destrói e cria de novo), igual acontece ao trocar de aba —
-    // é o jeito mais garantido de acertar o tamanho, já que só chamar resize() não resolvia
-    // sempre (o Chart.js às vezes "herdava" o tamanho anterior mesmo com o container já
-    // voltado ao normal).
+  if(!expandir && rerenderFn){
+    // fechando: recria o gráfico DO ZERO (destrói e cria de novo), igual acontece ao trocar de
+    // aba — é o jeito mais garantido de acertar o tamanho ao voltar. IMPORTANTE: só faz isso ao
+    // FECHAR — chamar isso ao abrir também recriava a aba inteira (renderMensal() reconstrói o
+    // card todo), o que apagava a classe "expandido" recém-aplicada e dava a impressão de abrir
+    // e fechar instantaneamente.
     setTimeout(()=> rerenderFn(), 60);
   } else if(chartInstance){
     chartInstance.resize();
