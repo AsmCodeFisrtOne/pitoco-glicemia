@@ -65,8 +65,8 @@ button{font-family:inherit;}
 
 /* ---------- App shell ---------- */
 #app{display:none;max-width:1200px;margin:0 auto;padding:20px 16px 80px;}
-header.top{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 18px;}
-header.top .id{display:flex;align-items:center;gap:10px;}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 18px;flex-wrap:wrap;row-gap:6px;}
+header.top .id{display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:6px;}
 header.top .paw{width:38px;height:38px;border-radius:10px;object-fit:cover;}
 header.top h1{font-size:20px;margin:0;line-height:1.1;}
 header.top .sub{font-size:12px;color:var(--muted);}
@@ -267,7 +267,7 @@ if ('serviceWorker' in navigator) {
         <div class="sub">Controle glicêmico</div>
       </div>
     </div>
-    <button class="logout" onclick="logout()">Sair</button>
+    <button class="logout" onclick="logout()">Logoff</button>
   </header>
 
   <nav class="tabs">
@@ -583,6 +583,7 @@ if ('serviceWorker' in navigator) {
         Registros de glicemia e curvas não são afetados. <strong>Não há como desfazer esta ação.</strong>
       </p>
       <button class="btn danger" onclick="apagarObsVetFluxo()">Apagar todas as observações da veterinária</button>
+      <button class="btn danger" onclick="apagarMensagensFluxo()" style="margin-top:8px">Apagar todas as mensagens</button>
     </div>
     <div class="card" id="card-protocolo-hipo" style="border:2px solid var(--accent-tint2, #c9a227);display:none">
       <h2>✏️ Protocolo de hipoglicemia <span style="font-size:11px;font-weight:600;color:#8a5c14">(profissional de saúde / Engenharia)</span></h2>
@@ -663,6 +664,8 @@ if ('serviceWorker' in navigator) {
         <tbody>
           <tr><td>Login (entrada no app)</td><td class="mono">Senha de acesso</td></tr>
           <tr><td>Configurações → Zona de perigo → Apagar todos os registros</td><td>1) a mesma <span class="mono">senha de acesso</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
+          <tr><td>Configurações → Zona de perigo → Apagar todas as mensagens</td><td>1) a mesma <span class="mono">senha de acesso</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
+          <tr><td>Aba Mensagens → 🗑 excluir (uma mensagem)</td><td>Sem senha — disponível na própria mensagem, pro autor dela ou pro acesso de Engenharia</td></tr>
         </tbody>
       </table>
       <p style="font-size:13px;color:var(--muted)">A senha de acesso é combinada entre você e a veterinária. É uma barreira de acesso casual, não criptografia de nível médico. Pode ser alterada a qualquer momento em Configurações → "Alterar senha de acesso" (pede a senha atual antes de trocar).</p>
@@ -813,7 +816,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev005.4"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev005.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev005.5: (1) texto automático do registro de hipoglicemia encurtado ("Episódio de
+// hipoglicemia (registro rápido) — edite para detalhar."). (2) botão "Sair" renomeado para
+// "Logoff". (3) badge de acesso (profissional de saúde / Engenharia) não quebra mais em 2
+// linhas no celular — texto com white-space:nowrap e o header/.id agora aceitam quebrar a
+// LINHA INTEIRA do badge pra baixo quando falta espaço, em vez de quebrar o texto no meio.
+// (4) Zona de perigo → novo botão "Apagar todas as mensagens" (senha de acesso + digitar
+// APAGAR), complementando o excluir por mensagem individual que já existia na aba Mensagens.
 // Rev005.4: (1) botão "Registrar este episódio agora" na aba Hipoglicemia agora salva o
 // registro automaticamente no Firestore (observação com sinal "Fraqueza/tremores" pré-marcado)
 // e só depois leva pra aba Lançar já em modo edição — antes só navegava, sem salvar nada, e
@@ -1008,7 +1018,7 @@ async function registrarEpisodioHipoglicemia(){
     insulinaTipo: null,
     dataInsulina: null,
     ultimaRefeicao: null,
-    observacao: 'Episódio de hipoglicemia registrado pelo alerta de emergência — edite para adicionar detalhes (o que foi feito, resposta, glicemia medida se houver).',
+    observacao: 'Episódio de hipoglicemia (registro rápido) — edite para detalhar.',
     curvaDia: false,
     localAplicacao: null,
     sinaisClinicos: ['Fraqueza / tremores'],
@@ -1194,14 +1204,14 @@ function aplicarModoAcesso(){
     const badge = document.createElement('span');
     badge.id = 'badge-modo-vet';
     badge.textContent = '👁️ Acesso profissional de saúde';
-    badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;';
+    badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;white-space:nowrap;';
     idBox.appendChild(badge);
   }
   if(modoAcesso === 'engenharia' && idBox && !document.getElementById('badge-modo-eng')){
     const badge = document.createElement('span');
     badge.id = 'badge-modo-eng';
     badge.textContent = '🛠️ Acesso de Engenharia';
-    badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;';
+    badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;white-space:nowrap;';
     idBox.appendChild(badge);
   }
   // painel de debug do lembrete só aparece no acesso de Engenharia
@@ -1413,6 +1423,32 @@ async function apagarTudo(){
       await lote.commit();
     }
     await customAlert(`Concluído: ${regSnap.size} lançamento(s) e ${curvSnap.size} curva(s) apagados.`, 'Concluído', '✅');
+  }catch(err){
+    await customAlert('Erro ao apagar: '+err.message);
+  }
+}
+async function apagarMensagensFluxo(){
+  const senha = await customPrompt('Para apagar TODAS as mensagens, digite a senha de acesso:', 'Confirmar exclusão', 'password');
+  if(senha === null) return;
+  if(senha !== senhaAcesso){
+    await customAlert('Senha incorreta. Nada foi apagado.');
+    return;
+  }
+  const confirmacao = await customPrompt('Ação irreversível. Digite APAGAR (em maiúsculas) para confirmar:', 'Confirmar exclusão');
+  if(confirmacao === null) return;
+  if(confirmacao !== 'APAGAR'){
+    await customAlert('Confirmação não corresponde a "APAGAR". Nada foi apagado.');
+    return;
+  }
+  try{
+    const snap = await db.collection('mensagens').get();
+    const refs = snap.docs.map(d=> db.collection('mensagens').doc(d.id));
+    for(let i=0; i<refs.length; i+=400){
+      const lote = db.batch();
+      refs.slice(i, i+400).forEach(ref=> lote.delete(ref));
+      await lote.commit();
+    }
+    await customAlert(`Concluído: ${snap.size} mensagem(ns) apagada(s).`, 'Concluído', '✅');
   }catch(err){
     await customAlert('Erro ao apagar: '+err.message);
   }
