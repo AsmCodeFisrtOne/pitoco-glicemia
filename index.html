@@ -150,14 +150,14 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
 .pill.alvo{background:var(--target-tint);color:var(--target);}
 
 .chart-wrap{background:var(--surface);border-radius:10px;padding:10px 6px;margin:14px 0;position:relative;height:220px;}
-.chart-wrap-curva{height:220px;cursor:zoom-in;}
-.chart-wrap-curva.expandido{
+.chart-expandivel{height:220px;cursor:zoom-in;}
+.chart-expandivel.expandido{
   position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
   width:94vw;max-width:900px;height:74vh;z-index:1001;
   box-shadow:0 10px 40px rgba(0,0,0,.35);cursor:zoom-out;margin:0;
 }
-.chart-wrap-curva::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
-.chart-wrap-curva.expandido::after{content:"🔍 toque para fechar";}
+.chart-expandivel::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
+.chart-expandivel.expandido::after{content:"🔍 toque para fechar";}
 .chart-overlay-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;}
 .chart-overlay-backdrop.ativo{display:block;}
 .chart-wrap canvas{max-height:100%;}
@@ -456,7 +456,7 @@ if ('serviceWorker' in navigator) {
     <div class="card">
       <h2>Últimos 7 dias</h2>
       <div id="semanal-stats" class="stats"></div>
-      <div class="chart-wrap"><canvas id="chart-semanal" height="180"></canvas></div>
+      <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, semanalChart)"><canvas id="chart-semanal" height="180"></canvas></div>
     </div>
     <div class="card">
       <h2>Sinais clínicos, atividade física e observações</h2>
@@ -827,7 +827,13 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev005.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev005.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev005.9: expandir-ao-clicar (overlay) removido dos gráficos da Curva glicêmica (voltaram
+// ao comportamento normal, sem clique especial) e movido pros gráficos principais de
+// glicemia do Relatório semanal (chart-semanal) e do Relatório mensal (chart-mensal-linha).
+// Classe CSS renomeada de .chart-wrap-curva pra .chart-expandivel, já que agora é
+// compartilhada entre vários gráficos, não só os da curva. O gráfico de dispersão
+// Glicemia x Insulina (mensal) não foi incluído — só o principal de cada relatório.
 // Rev005.8: gráfico da Curva glicêmica agora expande em overlay real ao clicar/tocar —
 // fica fixo, centralizado, por cima de tudo (94vw/900px máx · 74vh de altura), com fundo
 // escurecido atrás (chart-overlay-backdrop). Fecha clicando de novo no gráfico ou clicando
@@ -1600,7 +1606,7 @@ function renderCurvaTab(){
       <div class="card">
         <div class="curve-status"><span class="curve-dot"></span><h2 style="margin:0">Curva em andamento</h2></div>
         <div class="badge-complete">Iniciada em ${inicioFmt} · Insulina: ${ativa.insulinaDose||'—'} UI · ${ativa.insulinaTipo||''}</div>
-        <div class="chart-wrap chart-wrap-curva" style="margin-top:14px" onclick="toggleChartExpandido(this, curvaChartLive)"><canvas id="chart-curva-live"></canvas></div>
+        <div class="chart-wrap" style="margin-top:14px"><canvas id="chart-curva-live"></canvas></div>
         <h3>Pontos registrados</h3>
         <ul class="curve-points">${[...ativa.pontos].sort((a,b)=>new Date(a.horario)-new Date(b.horario)).map(p=>{
           const cls = classifica(p.glicemia);
@@ -1718,7 +1724,7 @@ function mostrarResultadoCurva(id){
     <h3>Retorno ao basal</h3>
     <p style="font-size:13px;color:var(--muted);margin-top:0">Compara a glicemia inicial (${stats.basal} mg/dL, antes da insulina) com a última leitura da curva (${stats.ultimaLeitura} mg/dL) — ajuda a ver se o efeito da insulina já passou perto da hora da próxima dose.</p>
     <div class="notice">${stats.retornoBasalPct===null ? 'Não foi possível calcular.' : stats.retornoBasalPct>=85 ? `A última leitura já voltou perto do valor basal (${stats.retornoBasalPct.toFixed(0)}% do inicial) — sugere que o efeito da insulina está acabando na hora certa.` : `A última leitura ainda está bem abaixo do basal (${stats.retornoBasalPct.toFixed(0)}% do inicial) — o efeito da insulina pode ainda estar ativo; considere comentar com a veterinária se isso se repetir.`}</div>
-    <div class="chart-wrap chart-wrap-curva" onclick="toggleChartExpandido(this, curvaChartResultado)"><canvas id="chart-curva-resultado"></canvas></div>
+    <div class="chart-wrap"><canvas id="chart-curva-resultado"></canvas></div>
     <button class="btn secondary" onclick="renderCurvaTab()">Fechar</button>
   `;
   container.innerHTML = '';
@@ -2529,7 +2535,7 @@ function renderMensal(){
           <button class="btn secondary" id="btn-view-diario" onclick="setChartView('diario')" style="font-size:12px;padding:6px 10px">Média diária</button>
           <button class="btn secondary" id="btn-view-bruto" onclick="setChartView('bruto')" style="font-size:12px;padding:6px 10px">Cada leitura</button>
         </div>
-        <div class="chart-wrap"><canvas id="chart-mensal-linha" height="200"></canvas></div>
+        <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, mensalChart1)"><canvas id="chart-mensal-linha" height="200"></canvas></div>
       </div>
       <div class="chart-wrap"><canvas id="chart-mensal-scatter" height="200"></canvas></div>
     </div>
