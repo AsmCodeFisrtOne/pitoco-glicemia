@@ -828,7 +828,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev006.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev006.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev006.9: (1) exportarPDF() agora busca a ficha do pet (config/PET_ID) fresca no Firestore
+// bem antes de gerar o PDF, em vez de confiar só no configPet carregado no login — corrige
+// o PDF mostrando o nome antigo do pet depois de uma mudança na Ficha (seja na mesma sessão
+// com timing ruim, seja noutra sessão/aparelho aberto em paralelo que não recarregou).
+// (2) Adicionado listener de visibilitychange: quando o sistema derruba a trava de
+// paisagem/fullscreen ao você abrir outro app (comportamento normal do SO) e depois volta
+// pro Pitoco, a trava é reaplicada automaticamente — antes só voltava fazendo login de novo.
 // Rev006.8: corrige o gráfico do Relatório mensal abrindo e fechando instantaneamente ao
 // clicar. Causa: a recriação do gráfico (rerenderFn) da Rev006.7 estava rodando tanto ao
 // ABRIR quanto ao FECHAR o zoom — e como renderMensal() reconstrói o card inteiro (inclusive
@@ -1280,6 +1287,16 @@ function _sairFullscreenPaisagem(){
   }
 }
 _entrarFullscreenPaisagem(); // tentativa early, assim que o script carrega (funciona se já veio de um gesto do usuário, ex: tocar no ícone do app)
+
+// o sistema operacional solta a trava de paisagem/fullscreen quando o app vai pro segundo
+// plano (ex: você abre outro app). Ao voltar pro Pitoco, reaplica a trava automaticamente —
+// sem isso, o app ficava destravado até um novo login.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible'){
+    const appVisivel = document.getElementById('app') && document.getElementById('app').style.display !== 'none';
+    if(appVisivel) _entrarFullscreenPaisagem();
+  }
+});
 
 function logout(){
   _sairFullscreenPaisagem();
@@ -2804,6 +2821,12 @@ async function exportarPDF(){
   const d = window._mensalReportData;
   if(!d){ await customAlert('Abra o relatório mensal antes de exportar.'); return; }
   const { key, lista, listaCompleta, s, sPrev, cv, diasComRegistro, totalDias, buckets, topHipo, topHiper, tendencia, episodiosSomogyi, doseKgMedia } = d;
+  // busca a ficha mais recente do pet antes de gerar o PDF — configPet só é carregado uma vez
+  // no login, então se o nome (ou outro dado da ficha) mudou depois disso, nessa sessão ou em
+  // outra aberta em paralelo (ex: tutor mudou no celular, veterinária gera o PDF no tablet
+  // dela sem ter recarregado), o PDF pegaria o valor antigo sem isso.
+  const petDocFresh = await db.collection('config').doc(PET_ID).get();
+  if(petDocFresh.exists){ configPet = petDocFresh.data(); aplicarNomePet(); }
   const docObs = await db.collection('relatoriosMensais').doc(key).get();
   const obs = (docObs.exists && docObs.data().observacoes) || [];
 
