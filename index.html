@@ -152,19 +152,12 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
 .chart-wrap{background:var(--surface);border-radius:10px;padding:10px 6px;margin:14px 0;position:relative;height:220px;}
 .chart-expandivel{height:220px;cursor:zoom-in;}
 .chart-expandivel.expandido{
-  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:94vw;max-width:900px;height:74vh;z-index:1001;
-  box-shadow:0 10px 40px rgba(0,0,0,.35);cursor:zoom-out;margin:0;
-}
-/* Celular em paisagem: tela curta e larga — usa quase toda a altura disponível
-   e libera o teto de 900px de largura, já que a largura raramente é o limite ali. */
-@media (orientation: landscape) and (max-height: 500px){
-  .chart-expandivel.expandido{
-    width:96vw;max-width:none;height:92vh;
-  }
+  position:fixed;inset:0;width:100vw;height:100dvh;
+  border-radius:0;z-index:1001;padding:16px;
+  box-shadow:none;cursor:zoom-out;margin:0;
 }
 .chart-expandivel::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
-.chart-expandivel.expandido::after{content:"🔍 toque para fechar";}
+.chart-expandivel.expandido::after{content:"🔍 toque para fechar";right:16px;bottom:16px;}
 .chart-overlay-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;}
 .chart-overlay-backdrop.ativo{display:block;}
 .chart-wrap canvas{max-height:100%;}
@@ -835,7 +828,16 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev006.4"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev006.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev006.5: gráfico expandido agora cobre a tela INTEIRA (position:fixed; inset:0; 100vw/
+// 100dvh), em vez de ficar centralizado com margens (94vw/74vh) — mais simples e evita o bug
+// relatado de "fechar maior do que era e cobrir o outro gráfico" no Relatório mensal (dois
+// gráficos empilhados, um deles expansível). Removida também a media query específica de
+// paisagem, já que agora é sempre tela cheia independente da orientação. O resize() do
+// Chart.js passou a rodar duas vezes (requestAnimationFrame + setTimeout 150ms) tanto ao
+// abrir quanto ao fechar, pra garantir que o canvas sempre acompanhe o tamanho final do
+// container, mesmo se o reflow do navegador demorar um pouco mais numa transição de
+// orientação.
 // Rev006.4: corrige a barra de abas extrapolando a tela em paisagem no celular. Causa: a
 // media query @media(min-width:820px) — pensada pra desktop — desligava o scroll horizontal
 // das abas (overflow-x:visible) sem permitir quebra de linha; como paisagem no celular
@@ -1666,8 +1668,13 @@ function toggleChartExpandido(wrapEl, chartInstance){
     backdrop.classList.toggle('ativo', expandindo);
     backdrop.onclick = expandindo ? (()=> toggleChartExpandido(wrapEl, chartInstance)) : null;
   }
-  // dá um tempinho pro reflow (mudança de position/tamanho) terminar antes do Chart.js recalcular o canvas
-  setTimeout(()=>{ if(chartInstance) chartInstance.resize(); }, 60);
+  // resize em dois momentos: um cedo (garante que o canvas já acompanha o novo tamanho o
+  // quanto antes) e outro um pouco depois (cobre o caso do reflow do navegador ainda não ter
+  // terminado no primeiro) — evita o canvas "herdar" o tamanho do estado anterior ao fechar.
+  if(chartInstance){
+    requestAnimationFrame(()=> chartInstance.resize());
+    setTimeout(()=> chartInstance.resize(), 150);
+  }
 }
 function renderCurvaTab(){
   const container = document.getElementById('curva-container');
