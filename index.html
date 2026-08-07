@@ -835,7 +835,23 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev006.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev006.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev006.2: força modo paisagem ao entrar no app (login bem-sucedido, sessão já autenticada
+// ao reabrir, e uma tentativa early assim que o script carrega) e destrava ao sair (Logoff
+// ou botão Sair na tela de login), via Screen Orientation API (screen.orientation.lock/
+// unlock), SEM Fullscreen API dessa vez (isso foi o que bagunçou a tela na Rev006.0).
+// manifest.webmanifest também mudou de "orientation":"any" para "landscape", que é o que
+// realmente trava a rotação de forma confiável quando o app está instalado como PWA
+// (Android). Em aba de navegador comum ou no iOS Safari, a API tende a recusar sem
+// fullscreen — nesse caso falha silenciosamente e o app segue normal, só sem forçar a
+// rotação; não há como contornar essa limitação do navegador sem reintroduzir o problema
+// da versão anterior.
+// Rev006.1: REVERTIDO o fullscreen + trava de orientação em paisagem da Rev006.0 — bagunçava
+// o tamanho da tela em vários aparelhos e não entrava em paisagem automaticamente como
+// esperado. Gráfico expandido voltou a ser só o overlay CSS position:fixed centralizado
+// (sem Fullscreen API, sem Screen Orientation API). O media query de paisagem
+// (@media(orientation:landscape) and (max-height:500px)) continua — esse ajusta só o
+// tamanho do overlay SE o celular já estiver naturalmente em paisagem, não força rotação.
 // Rev006.0: (1) botão "Sair" na tela de login, tenta window.close() e avisa se não conseguir
 // fechar sozinho (a maioria dos navegadores bloqueia fechar abas que o próprio usuário abriu).
 // (2) Tamanhos do gráfico expandido reestruturados para celular em paisagem (tela curta e
@@ -1169,6 +1185,7 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','completo');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    _travarPaisagem();
     initApp();
   } else if(senhaVet && v === senhaVet){
     modoAcesso = 'veterinaria';
@@ -1176,6 +1193,7 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','veterinaria');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    _travarPaisagem();
     initApp();
   } else if(v === SENHA_ENGENHARIA){
     modoAcesso = 'engenharia';
@@ -1183,12 +1201,32 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','engenharia');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    _travarPaisagem();
     initApp();
   } else {
     document.getElementById('gate-err').textContent = 'Senha incorreta.';
   }
 }
+/* ---------------- ORIENTAÇÃO: força paisagem ao entrar no app, destrava ao sair ----------------
+   Funciona de fato (trava a rotação) em Android Chrome/Edge quando o app está instalado como
+   PWA (aí o manifest.webmanifest também pede "orientation":"landscape"). Em aba de navegador
+   comum ou no iOS Safari, a Screen Orientation API costuma recusar sem fullscreen — nesses
+   casos a chamada falha silenciosamente (catch vazio) e o app segue funcionando normal, só
+   sem forçar a rotação. */
+function _travarPaisagem(){
+  if(screen.orientation && screen.orientation.lock){
+    screen.orientation.lock('landscape').catch(()=>{});
+  }
+}
+function _destravarPaisagem(){
+  if(screen.orientation && screen.orientation.unlock){
+    try{ screen.orientation.unlock(); }catch(e){}
+  }
+}
+_travarPaisagem(); // tentativa early, assim que o script carrega
+
 function logout(){
+  _destravarPaisagem();
   sessionStorage.removeItem('pitoco_auth');
   sessionStorage.removeItem('pitoco_modo');
   location.reload();
@@ -1198,6 +1236,7 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   window.addEventListener('DOMContentLoaded', initApp);
+  window.addEventListener('DOMContentLoaded', _travarPaisagem);
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 document.getElementById('gate-version').textContent = APP_VERSION;
@@ -1575,6 +1614,7 @@ function curvaAtiva(){ return curvas.find(c=>!c.finalizada); }
 
 /* ---------------- TELA DE LOGIN: botão Sair (fecha o app/aba) ---------------- */
 function fecharApp(){
+  _destravarPaisagem();
   window.close();
   // window.close() só funciona se a aba/janela foi aberta por script (ou em alguns PWAs
   // instalados). Se não fechar (a maioria dos casos no navegador comum), avisa o usuário.
@@ -1583,14 +1623,11 @@ function fecharApp(){
   }, 300);
 }
 
-/* ---------------- GRÁFICO EXPANDIDO: tela cheia + paisagem automática no celular ----------------
-   Ao expandir: entra em fullscreen e trava a orientação em paisagem (onde o navegador suporta —
-   Android Chrome/Edge; iOS Safari não suporta a Screen Orientation API em fullscreen, então nesses
-   aparelhos o gráfico só fica grande mesmo, sem forçar a rotação).
-   Ao fechar (de novo no gráfico, clicando fora, ou saindo do fullscreen pelo gesto do sistema):
-   destrava a orientação e sai do fullscreen, voltando tudo ao estado original. */
-let _chartExpandidoEl = null;
-
+/* ---------------- GRÁFICO EXPANDIDO: overlay simples (sem Fullscreen API) ----------------
+   Tentativa anterior usava a Fullscreen API + travar orientação em paisagem, mas isso
+   bagunçava o tamanho da tela em vários aparelhos — revertido. Agora é só um overlay CSS
+   position:fixed centralizado (ver .chart-expandivel.expandido), sem mexer em
+   fullscreen/orientação do navegador. */
 function toggleChartExpandido(wrapEl, chartInstance){
   const expandindo = !wrapEl.classList.contains('expandido');
   wrapEl.classList.toggle('expandido');
@@ -1599,39 +1636,9 @@ function toggleChartExpandido(wrapEl, chartInstance){
     backdrop.classList.toggle('ativo', expandindo);
     backdrop.onclick = expandindo ? (()=> toggleChartExpandido(wrapEl, chartInstance)) : null;
   }
-  if(expandindo){
-    _chartExpandidoEl = wrapEl;
-    if(wrapEl.requestFullscreen){
-      wrapEl.requestFullscreen().then(()=>{
-        if(screen.orientation && screen.orientation.lock){
-          screen.orientation.lock('landscape').catch(()=>{}); // navegador pode recusar (ex: iOS Safari) — sem problema, segue só grande mesmo
-        }
-      }).catch(()=>{});
-    }
-  } else {
-    _chartExpandidoEl = null;
-    if(screen.orientation && screen.orientation.unlock){
-      try{ screen.orientation.unlock(); }catch(e){}
-    }
-    if(document.fullscreenElement){
-      document.exitFullscreen().catch(()=>{});
-    }
-  }
   // dá um tempinho pro reflow (mudança de position/tamanho) terminar antes do Chart.js recalcular o canvas
   setTimeout(()=>{ if(chartInstance) chartInstance.resize(); }, 60);
 }
-// se o usuário sair do fullscreen pelo gesto do próprio sistema (voltar, deslizar), sincroniza o estado
-document.addEventListener('fullscreenchange', ()=>{
-  if(!document.fullscreenElement && _chartExpandidoEl && _chartExpandidoEl.classList.contains('expandido')){
-    _chartExpandidoEl.classList.remove('expandido');
-    const backdrop = document.getElementById('chart-overlay-backdrop');
-    if(backdrop){ backdrop.classList.remove('ativo'); backdrop.onclick = null; }
-    if(screen.orientation && screen.orientation.unlock){
-      try{ screen.orientation.unlock(); }catch(e){}
-    }
-    _chartExpandidoEl = null;
-  }
-});
 function renderCurvaTab(){
   const container = document.getElementById('curva-container');
   const ativa = curvaAtiva();
