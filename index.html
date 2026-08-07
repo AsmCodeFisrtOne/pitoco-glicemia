@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pitoco • Controle Glicêmico</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1D4E4E">
+<link rel="icon" href="/icons/icon-192x192.png">
+<link rel="apple-touch-icon" href="/icons/icon-180x180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Pitoco">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
@@ -226,6 +232,11 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
 .cm-box.grande .cm-message{padding:20px 22px 6px;font-size:15px;text-align:center;color:var(--ink);}
 .cm-box.grande .cm-actions{padding:16px 22px 24px;justify-content:center;}
 </style>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+}
+</script>
 </head>
 <body>
 
