@@ -509,8 +509,8 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
       <button class="btn" onclick="alterarSenha()">Salvar nova senha</button>
     </div>
     <div class="card">
-      <h2>Senha de acesso para o profissional de saúde (modo somente leitura)</h2>
-      <div class="notice">Opcional. Se configurada, quem entrar com essa senha vê os relatórios, curvas, exames e a ficha — mas não consegue lançar dados, editar/excluir nada, nem acessar Configurações. Útil pra dar acesso à veterinária sem expor a senha completa do tutor.</div>
+      <h2>Senha de acesso para o profissional de saúde</h2>
+      <div class="notice">Opcional. Dá acesso ao app inteiro (igual ao acesso do tutor), sem precisar compartilhar a senha principal — a única diferença é um aviso "👁️ Acesso profissional de saúde" que aparece no cabeçalho, pra identificar que foi essa senha que foi usada.</div>
       <div class="field"><label>Senha atual (a mesma da entrada normal)</label><input type="password" id="senha-atual-vet"></div>
       <div class="field"><label>Senha do profissional de saúde (deixe em branco pra desativar)</label><input type="password" id="senha-vet-nova"></div>
       <button class="btn" onclick="alterarSenhaVet()">Salvar senha do profissional de saúde</button>
@@ -686,7 +686,7 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev004.7"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
 let _modoVoz = false;
@@ -887,19 +887,12 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
 /* ---------------- INIT ---------------- */
 function aplicarModoAcesso(){
   if(modoAcesso !== 'veterinaria') return;
-  // esconde as abas de entrada de dados e configurações — profissional de saúde só visualiza
-  document.querySelectorAll('nav.tabs button[data-tab="lancar"], nav.tabs button[data-tab="config"]').forEach(b=> b.style.display='none');
-  // se por acaso a aba ativa for uma dessas, troca pro relatório mensal
-  const abaAtiva = document.querySelector('nav.tabs button.active');
-  if(abaAtiva && (abaAtiva.dataset.tab==='lancar' || abaAtiva.dataset.tab==='config')){
-    document.querySelector('nav.tabs button[data-tab="mensal"]')?.click();
-  }
-  // aviso visual no cabeçalho
+  // app idêntico pros dois tipos de acesso — só o aviso visual muda
   const header = document.querySelector('header.top');
   if(header && !document.getElementById('badge-modo-vet')){
     const badge = document.createElement('span');
     badge.id = 'badge-modo-vet';
-    badge.textContent = '👁️ Acesso profissional de saúde (somente leitura)';
+    badge.textContent = '👁️ Acesso profissional de saúde';
     badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;';
     header.appendChild(badge);
   }
@@ -908,6 +901,8 @@ function initApp(){
   const now = new Date();
   document.getElementById('in-data-glicemia').value = toLocalInput(now);
   aplicarModoAcesso();
+  _carregarLembreteState().then(()=> verificarLembreteMedicao());
+  setInterval(()=> verificarLembreteMedicao(), 5*60000); // reavalia a cada 5 minutos (abertura/fechamento da janela)
 
   db.collection('config').doc('parametros').get().then(doc=>{
     if(doc.exists){ configParam = {intervaloCurvaHoras:1, ...doc.data()}; } // garante o padrão de 1h em documentos salvos antes desse campo existir
@@ -943,6 +938,7 @@ function initApp(){
     renderUltimaLeitura();
     renderMonths();
     populateMesSelect();
+    verificarLembreteMedicao();
   });
 
   db.collection('config').doc('insulina').get().then(doc=>{
@@ -1168,10 +1164,6 @@ function renderCurvaTab(){
   const container = document.getElementById('curva-container');
   const ativa = curvaAtiva();
   if(!ativa){
-    if(modoAcesso==='veterinaria'){
-      container.innerHTML = `<div class="card"><h2>Curva glicêmica</h2><div class="empty">Nenhuma curva em andamento. O lançamento de novas curvas é feito pelo tutor.</div></div>`;
-      return;
-    }
     container.innerHTML = `
       <div class="card">
         <h2>Iniciar nova curva glicêmica</h2>
@@ -1217,7 +1209,6 @@ function renderCurvaTab(){
           return `<li><span class="t">${new Date(p.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${p.observacao?` <span style="color:var(--muted);font-style:italic">— ${p.observacao}</span>`:''}</span><span class="v" style="color:${cor}">${p.glicemia} mg/dL</span></li>`;
         }).join('')}</ul>
         ${proxima ? `<div class="notice">Próxima leitura sugerida: por volta das ${proxima.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} (a cada ${intervaloH===1?'1 hora':intervaloH<1?(intervaloH*60)+' min':intervaloH+'h'})</div>` : ''}
-        ${modoAcesso==='veterinaria' ? '' : `
         <h3>Novo ponto</h3>
         <div class="grid">
           <div class="field"><label>Glicemia (mg/dL)</label><input type="number" id="curva-novo-ponto" placeholder="Ex: 150"></div>
@@ -1227,7 +1218,7 @@ function renderCurvaTab(){
         <div class="btn-row">
           <button class="btn" onclick="adicionarPontoCurva('${ativa.id}')">Adicionar ponto</button>
           <button class="btn secondary" onclick="finalizarCurva('${ativa.id}')">Finalizar curva</button>
-        </div>`}
+        </div>
       </div>`;
     if(stats && ativa.pontos.length>=2){
       const ctx = document.getElementById('chart-curva-live').getContext('2d');
@@ -1236,7 +1227,8 @@ function renderCurvaTab(){
         type:'line',
         data:{ labels: stats.pontos.map(p=>new Date(p.horario).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})),
           datasets:[..._datasetsFaixaAlvo(stats.pontos.length), { label:'Glicemia', data: stats.pontos.map(p=>p.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.3, pointRadius:4 }] },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} },
+        plugins:[_faixaAlvoLabelPlugin]
       });
     }
   }
@@ -1342,11 +1334,92 @@ function mostrarResultadoCurva(id){
         ..._datasetsFaixaAlvo(stats.pontos.length),
         { label:'Medido', data: stats.pontos.map(p=>p.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.08)', fill:true, tension:0.35, pointRadius:4 }
       ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}, filter:(item)=>!item.text.startsWith('Alvo')}}} }
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}, filter:(item)=>!item.text.startsWith('Alvo')}}} },
+    plugins:[_faixaAlvoLabelPlugin]
   });
 }
 
 /* ---------------- HELPERS ---------------- */
+/* ---------------- LEMBRETE SEMANAL DE MEDIÇÃO PÓS-INSULINA ---------------- */
+// Toda segunda-feira, depois da 1ª insulina do dia, pede uma medição 6h depois (janela de 1h pra fazer).
+// Se perder a janela, tenta de novo no dia seguinte, até conseguir — aí só lembra de novo na semana que vem.
+window._lembreteState = { proximaData: null };
+const _lembreteState = window._lembreteState;
+function _dataYMD(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function _proximaSegundaAPartirDe(d){
+  const dia = d.getDay(); // 0=domingo...6=sábado, 1=segunda
+  const diff = dia===1 ? 0 : (8-dia)%7;
+  const alvo = new Date(d); alvo.setDate(d.getDate()+diff); alvo.setHours(0,0,0,0);
+  return _dataYMD(alvo);
+}
+async function _carregarLembreteState(){
+  const doc = await db.collection('config').doc('lembreteCurva').get();
+  if(doc.exists && doc.data().proximaData){
+    _lembreteState.proximaData = doc.data().proximaData;
+  } else {
+    _lembreteState.proximaData = _proximaSegundaAPartirDe(new Date());
+    await db.collection('config').doc('lembreteCurva').set({proximaData: _lembreteState.proximaData}, {merge:true});
+  }
+}
+async function _salvarProximaData(novaData){
+  _lembreteState.proximaData = novaData;
+  await db.collection('config').doc('lembreteCurva').set({proximaData: novaData}, {merge:true}).catch(()=>{});
+}
+function verificarLembreteMedicao(agora = new Date()){
+  if(!_lembreteState.proximaData) return; // ainda carregando o estado
+  const hojeStr = _dataYMD(agora);
+  if(hojeStr < _lembreteState.proximaData){ _esconderBannerLembrete(); return; }
+
+  // acha a 1ª insulina aplicada hoje (usa dataInsulina se houver, senão a própria dataGlicemia)
+  const doHoje = registros.filter(r=> !r.apenasObservacao && r.insulinaDose && _dataYMD(new Date(r.dataInsulina||r.dataGlicemia))===hojeStr);
+  if(!doHoje.length){ _esconderBannerLembrete(); return; }
+  doHoje.sort((a,b)=> new Date(a.dataInsulina||a.dataGlicemia) - new Date(b.dataInsulina||b.dataGlicemia));
+  const horaInsulina = new Date(doHoje[0].dataInsulina || doHoje[0].dataGlicemia);
+  const inicioJanela = new Date(horaInsulina.getTime() + 6*3600000);
+  const fimJanela = new Date(horaInsulina.getTime() + 7*3600000);
+
+  const medicaoNaJanela = registros.some(r=> r.glicemia!==null && r.glicemia!==undefined &&
+    new Date(r.dataGlicemia) >= inicioJanela && new Date(r.dataGlicemia) <= fimJanela);
+
+  if(medicaoNaJanela){
+    _esconderBannerLembrete();
+    if(hojeStr === _lembreteState.proximaData){ // só avança se ainda não tinha avançado
+      const proxSemana = new Date(agora); proxSemana.setDate(agora.getDate()+7);
+      _salvarProximaData(_proximaSegundaAPartirDe(proxSemana));
+    }
+    return;
+  }
+
+  if(agora < inicioJanela){ _esconderBannerLembrete(); return; }
+
+  if(agora <= fimJanela){
+    _mostrarBannerLembrete(fimJanela, agora);
+    return;
+  }
+
+  // passou da janela sem medir -> tenta de novo amanhã
+  _esconderBannerLembrete();
+  if(hojeStr === _lembreteState.proximaData){
+    const amanha = new Date(agora); amanha.setDate(agora.getDate()+1);
+    _salvarProximaData(_dataYMD(amanha));
+  }
+}
+function _mostrarBannerLembrete(fimJanela, agora = new Date()){
+  let banner = document.getElementById('banner-lembrete-medicao');
+  if(!banner){
+    banner = document.createElement('div');
+    banner.id = 'banner-lembrete-medicao';
+    banner.style.cssText = 'position:sticky;top:0;z-index:50;background:#EF9F27;color:#3A2A08;padding:10px 16px;font-size:13.5px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;';
+    document.body.prepend(banner);
+  }
+  const minutosRestantes = Math.max(0, Math.round((fimJanela.getTime()-agora.getTime())/60000));
+  banner.innerHTML = `<span>🔔 Hora da medição semanal de acompanhamento — 6h após a 1ª insulina de hoje (janela fecha em ~${minutosRestantes} min)</span>
+    <button class="btn" style="padding:6px 12px;font-size:12.5px" onclick="document.querySelector('[data-tab=&quot;lancar&quot;]').click()">Lançar agora</button>`;
+}
+function _esconderBannerLembrete(){
+  const banner = document.getElementById('banner-lembrete-medicao');
+  if(banner) banner.remove();
+}
 function toLocalInput(d){
   const pad = n=>String(n).padStart(2,'0');
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -1670,7 +1743,7 @@ function renderMonths(){
         <td class="mono g">${celulaGlicemia}</td>
         <td class="mono">${r.insulinaDose ?? '—'}${r.insulinaTipo? ' · '+r.insulinaTipo:''}</td>
         <td>${r.observacao||''}${atividadeTxt}${r.sinaisClinicos&&r.sinaisClinicos.length? '<br>'+r.sinaisClinicos.map(s=>`<span class="pill hiper" style="margin-top:3px;display:inline-block">${s}</span>`).join(' '):''}</td>
-        <td>${modoAcesso==='veterinaria' ? '—' : `<button class="rowbtn" onclick="editarRegistro('${r.id}')">editar</button><button class="rowbtn" onclick="excluirRegistro('${r.id}')">excluir</button>`}</td>
+        <td><button class="rowbtn" onclick="editarRegistro('${r.id}')">editar</button><button class="rowbtn" onclick="excluirRegistro('${r.id}')">excluir</button></td>
       </tr>`;
     }).join('');
     return `<div class="month-block ${idx===0?'open':''}">
@@ -1742,7 +1815,8 @@ function renderSemanal(){
     options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
       plugins:{legend:{display:false},
         tooltip:{ callbacks:{ title:(items)=> fmtDate(lista[items[0].dataIndex].dataGlicemia) }, filter:(item)=> !item.dataset.label.startsWith('Alvo') } },
-      scales:{ y:{ suggestedMin: configParam.hipo-30, suggestedMax: configParam.hiper+30 }, x:{ ticks:{ autoSkip:true, maxRotation:45 } } } }
+      scales:{ y:{ suggestedMin: configParam.hipo-30, suggestedMax: configParam.hiper+30 }, x:{ ticks:{ autoSkip:true, maxRotation:45 } } } },
+    plugins:[_faixaAlvoLabelPlugin]
   });
   renderSinaisObservacoes('semanal-obs', listaCompleta);
 }
@@ -1798,10 +1872,37 @@ function populateMesSelect(){
 function _datasetsFaixaAlvo(qtdPontos){
   // banda sombreada representando a faixa alvo — reaproveitada em todos os gráficos de glicemia
   return [
-    { label:'Alvo (máx)', data: Array(qtdPontos).fill(configParam.alvoMax), borderColor:'rgba(76,154,106,0.6)', borderWidth:1, borderDash:[4,3], backgroundColor:'rgba(76,154,106,0.22)', fill:'+1', pointRadius:0, pointHitRadius:0, order:-10, tension:0 },
-    { label:'Alvo (mín)', data: Array(qtdPontos).fill(configParam.alvoMin), borderColor:'rgba(76,154,106,0.6)', borderWidth:1, borderDash:[4,3], backgroundColor:'rgba(76,154,106,0.22)', fill:false, pointRadius:0, pointHitRadius:0, order:-10, tension:0 }
+    { label:'Alvo (máx)', data: Array(qtdPontos).fill(configParam.alvoMax), borderColor:'rgba(76,154,106,0.85)', borderWidth:1.5, backgroundColor:'rgba(76,154,106,0.30)', fill:'+1', pointRadius:0, pointHitRadius:0, order:-10, tension:0 },
+    { label:'Alvo (mín)', data: Array(qtdPontos).fill(configParam.alvoMin), borderColor:'rgba(76,154,106,0.85)', borderWidth:1.5, backgroundColor:'rgba(76,154,106,0.30)', fill:false, pointRadius:0, pointHitRadius:0, order:-10, tension:0 }
   ];
 }
+// plugin que desenha um rótulo "Faixa alvo" direto no gráfico, dentro da própria banda sombreada —
+// dá destaque real, em vez de depender só da cor de fundo pra comunicar o que aquela área significa
+const _faixaAlvoLabelPlugin = {
+  id: 'faixaAlvoLabel',
+  afterDraw(chart){
+    const yScale = chart.scales.y;
+    if(!yScale) return;
+    const yMax = yScale.getPixelForValue(configParam.alvoMax);
+    const yMin = yScale.getPixelForValue(configParam.alvoMin);
+    if(yMax===undefined || yMin===undefined || isNaN(yMax) || isNaN(yMin)) return;
+    const ctx = chart.ctx;
+    const area = chart.chartArea;
+    const yCentro = (yMax+yMin)/2;
+    if(yCentro < area.top || yCentro > area.bottom) return; // faixa fora da área visível, não desenha o rótulo
+    ctx.save();
+    ctx.font = 'bold 10.5px sans-serif';
+    const texto = `Faixa alvo (${configParam.alvoMin}–${configParam.alvoMax})`;
+    const largura = ctx.measureText(texto).width;
+    const x = area.right - largura - 10;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillRect(x-5, yCentro-9, largura+10, 18);
+    ctx.fillStyle = '#2E6B4F';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(texto, x, yCentro);
+    ctx.restore();
+  }
+};
 function agregarPorDia(lista){
   const porDia = {};
   lista.forEach(r=>{
@@ -1847,7 +1948,8 @@ function renderChartMensalLinha(modo){
       options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
         plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}, filter:(item)=>!item.text.startsWith('Alvo')}}, title:{display:true,text:'Média diária (faixa mín–máx sombreada) + tendência'},
           tooltip:{ callbacks:{ afterTitle:(items)=>{ const d = dias[items[0].dataIndex]; return `${d.n} leitura(s) neste dia`; } }, filter:(item)=> !item.dataset.label.startsWith('Alvo') } },
-        scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
+        scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } },
+      plugins:[_faixaAlvoLabelPlugin]
     });
   } else {
     const tendencia = calcularTendenciaLinear(lista.map(r=>r.glicemia));
@@ -1862,7 +1964,8 @@ function renderChartMensalLinha(modo){
         interaction:{ mode:'index', intersect:false },
         plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}, filter:(item)=>!item.text.startsWith('Alvo')}}, title:{display:true,text:'Glicemia ao longo do mês (cada leitura) + tendência'},
         tooltip:{ callbacks:{ title: (items)=> new Date(lista[items[0].dataIndex].dataGlicemia).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) }, filter:(item)=> !item.dataset.label.startsWith('Alvo') } },
-        scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } }
+        scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } },
+      plugins:[_faixaAlvoLabelPlugin]
     });
   }
 }
