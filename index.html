@@ -710,11 +710,15 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev004.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev005.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 // Rev004.8: adicionado painel "🧪 Modo debug" em Configurações para simular o lembrete semanal
 // de medição pós-insulina sem precisar esperar segunda-feira / 6h reais (ver seção DEBUG LEMBRETE).
 // Rev004.9: 3º nível de acesso "Engenharia" (senha fixa no código, não fica no Firestore e não
 // precisa ser cadastrada em Configurações). Só nesse acesso o painel de debug do lembrete aparece.
+// Rev005.0: corrige bug visual em que o botão "Sair" ficava "solto" no meio do cabeçalho nos
+// acessos de profissional de saúde / Engenharia — o badge de acesso agora entra dentro da
+// div.id (junto do logo/nome), e não mais como 3º filho direto do header (que tem
+// justify-content:space-between com só 2 filhos esperados).
 const SENHA_ENGENHARIA = "Primos@235711"; // acesso de Engenharia — fixa no código de propósito (não é a senha do tutor nem a da veterinária)
 
 /* ---------------- MODAL CUSTOMIZADO (substitui alert/confirm/prompt) ---------------- */
@@ -922,20 +926,20 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
 
 /* ---------------- INIT ---------------- */
 function aplicarModoAcesso(){
-  const header = document.querySelector('header.top');
-  if(modoAcesso === 'veterinaria' && header && !document.getElementById('badge-modo-vet')){
+  const idBox = document.querySelector('header.top .id');
+  if(modoAcesso === 'veterinaria' && idBox && !document.getElementById('badge-modo-vet')){
     const badge = document.createElement('span');
     badge.id = 'badge-modo-vet';
     badge.textContent = '👁️ Acesso profissional de saúde';
     badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;';
-    header.appendChild(badge);
+    idBox.appendChild(badge);
   }
-  if(modoAcesso === 'engenharia' && header && !document.getElementById('badge-modo-eng')){
+  if(modoAcesso === 'engenharia' && idBox && !document.getElementById('badge-modo-eng')){
     const badge = document.createElement('span');
     badge.id = 'badge-modo-eng';
     badge.textContent = '🛠️ Acesso de Engenharia';
     badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;';
-    header.appendChild(badge);
+    idBox.appendChild(badge);
   }
   // painel de debug do lembrete só aparece no acesso de Engenharia
   const painelDebug = document.getElementById('card-debug-lembrete');
