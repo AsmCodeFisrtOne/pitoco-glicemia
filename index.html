@@ -629,7 +629,8 @@ if ('serviceWorker' in navigator) {
       <h2>📊 Dias do agendamento glicêmico <span style="font-size:11px;font-weight:600;color:#8a5c14">(profissional de saúde / Engenharia)</span></h2>
       <p style="font-size:13px;color:var(--muted);margin-top:0">
         Marque em quais dias da semana o app deve pedir a medição de acompanhamento, 6h após a 1ª insulina daquele
-        dia. Pode marcar mais de um dia. Esses dias também aparecem sinalizados (📊, sem horário) na aba Agenda.
+        dia. Pode marcar mais de um dia, ou nenhum — deixando tudo desmarcado, o agendamento glicêmico fica
+        desativado (sem banner, sem notificação, sem selo na Agenda) até você marcar algum dia de novo.
       </p>
       <div id="cfg-dias-glicemicos-checks" style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0"></div>
       <button class="btn" onclick="salvarDiasGlicemicos()">Salvar dias</button>
@@ -928,7 +929,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev007.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev007.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev007.9: agora é possível desativar o agendamento glicêmico por completo, deixando todos
+// os dias desmarcados em Configurações → "📊 Dias do agendamento glicêmico" — antes o app
+// obrigava pelo menos 1 dia marcado. Com tudo desmarcado: diasSemana fica [], proximaData vira
+// null, e verificarLembreteMedicao() para de mostrar banner/notificação e esconde qualquer um
+// que estivesse ativo (chama _esconderBannerLembrete() nesse caso). O selo 📊 some da Agenda.
+// Instalações que nunca configuraram nada continuam com o padrão antigo (segunda-feira),
+// intacto.
 // Rev007.8: nova aba "📅 Agenda", visível pra todos os acessos. (1) Compromissos semanais
 // recorrentes (dia + hora início/fim opcional + descrição), coleção Firestore 'agenda',
 // qualquer acesso pode adicionar/excluir. (2) Dias com agendamento glicêmico aparecem com um
@@ -2129,18 +2137,20 @@ function _dataYMD(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullY
 const DIAS_SEMANA_NOMES = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 const DIAS_SEMANA_ABREV = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 function _proximoDiaGlicemicoAPartirDe(d, diasSemana){
-  const dias = (diasSemana && diasSemana.length) ? diasSemana : [1]; // nunca fica sem nenhum dia configurado
+  if(!diasSemana || !diasSemana.length) return null; // agendamento glicêmico desativado — sem próxima data
   for(let i=0; i<7; i++){
     const alvo = new Date(d); alvo.setDate(d.getDate()+i); alvo.setHours(0,0,0,0);
-    if(dias.includes(alvo.getDay())) return _dataYMD(alvo);
+    if(diasSemana.includes(alvo.getDay())) return _dataYMD(alvo);
   }
-  return _dataYMD(d); // nunca deveria chegar aqui, mas evita travar
+  return null;
 }
 async function _carregarLembreteState(){
   const doc = await db.collection('config').doc('lembreteCurva').get();
   const dados = doc.exists ? doc.data() : {};
-  _lembreteState.diasSemana = (dados.diasSemana && dados.diasSemana.length) ? dados.diasSemana : [1];
-  if(dados.proximaData){
+  // diasSemana pode legitimamente ser [] (médica desativou) — só usa o padrão [1] se o campo
+  // nunca foi salvo (instalação nova / nunca configurada).
+  _lembreteState.diasSemana = (dados.diasSemana !== undefined) ? dados.diasSemana : [1];
+  if(dados.proximaData !== undefined){
     _lembreteState.proximaData = dados.proximaData;
   } else {
     _lembreteState.proximaData = _proximoDiaGlicemicoAPartirDe(new Date(), _lembreteState.diasSemana);
@@ -2163,19 +2173,21 @@ function renderCheckboxesDiasGlicemicos(){
 }
 async function salvarDiasGlicemicos(){
   const marcados = Array.from(document.querySelectorAll('#cfg-dias-glicemicos-checks input:checked')).map(el=>parseInt(el.value,10));
-  if(!marcados.length){
-    await customAlert('Marque pelo menos um dia da semana.');
-    return;
-  }
+  // pode ficar vazio de propósito — a médica pode decidir desativar o agendamento glicêmico
   _lembreteState.diasSemana = marcados;
   await db.collection('config').doc('lembreteCurva').set({diasSemana: marcados}, {merge:true});
-  // se a próxima data agendada não corresponde mais a um dia configurado, recalcula
-  const proxima = new Date(_lembreteState.proximaData+'T00:00:00');
-  if(!marcados.includes(proxima.getDay())){
-    await _salvarProximaData(_proximoDiaGlicemicoAPartirDe(new Date(), marcados));
+  if(!marcados.length){
+    // desativado: limpa a próxima data e esconde qualquer banner/notificação pendente
+    await _salvarProximaData(null);
+  } else {
+    const proxima = _lembreteState.proximaData ? new Date(_lembreteState.proximaData+'T00:00:00') : null;
+    if(!proxima || !marcados.includes(proxima.getDay())){
+      await _salvarProximaData(_proximoDiaGlicemicoAPartirDe(new Date(), marcados));
+    }
   }
+  verificarLembreteMedicao();
   renderAgenda();
-  await customAlert('Dias do agendamento glicêmico salvos.');
+  await customAlert(marcados.length ? 'Dias do agendamento glicêmico salvos.' : 'Agendamento glicêmico desativado — nenhum dia selecionado.');
 }
 
 /* ---------------- AGENDA (compromissos semanais recorrentes) ---------------- */
@@ -2218,7 +2230,7 @@ async function excluirAgendaItem(id){
 }
 
 function verificarLembreteMedicao(agora = new Date()){
-  if(!_lembreteState.proximaData) return; // ainda carregando o estado
+  if(!_lembreteState.proximaData){ _esconderBannerLembrete(); return; } // ainda carregando OU agendamento glicêmico desativado (sem nenhum dia marcado)
   const hojeStr = _dataYMD(agora);
   if(hojeStr < _lembreteState.proximaData){ _esconderBannerLembrete(); return; }
 
