@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script>
+// roda ANTES de qualquer coisa pintar na tela — evita o "flash" da tela de login aparecendo
+// por um instante toda vez que a página recarrega (ex: ao fechar o zoom de um gráfico) pra
+// quem já estava logado nessa sessão.
+if (sessionStorage.getItem('pitoco_auth') === '1') {
+  document.documentElement.classList.add('pitoco-logado');
+}
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pitoco • Controle Glicêmico</title>
@@ -54,6 +62,8 @@ button{font-family:inherit;}
 
 /* ---------- Login gate ---------- */
 #gate{position:fixed;inset:0;background:var(--primary-dark);display:flex;align-items:center;justify-content:center;z-index:100;}
+html.pitoco-logado #gate{display:none;}
+html.pitoco-logado #app{display:block;}
 #gate .card{background:var(--surface);border-radius:var(--radius);padding:36px 32px;width:min(360px,88vw);box-shadow:var(--shadow);text-align:center;}
 #gate .paw{display:block;margin:0 auto 6px;width:64px;height:64px;border-radius:16px;object-fit:cover;}
 #gate h1{font-size:22px;margin:0 0 4px;}
@@ -915,7 +925,7 @@ if ('serviceWorker' in navigator) {
       </div>
 
       <div style="border:1.5px dashed var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;color:var(--muted);text-align:center">
-        Tem uma história parecida com a nossa? Adoraríamos ouvir. Escreva pra <a href="mailto:pitoco.fsb2013@gmail.com?subject=Minha%20hist%C3%B3ria%20de%20cuidado" style="color:var(--primary-dark);font-weight:600">pitoco.fsb2013@gmail.com</a> — algumas histórias podem ser compartilhadas aqui no app (com seu nome ou anônimas, como você preferir).
+        Tem uma história parecida com a nossa? Adoraríamos ouvir. Escreva pra <a href="mailto:pitoco.fsb2013@gmail.com?subject=Minha%20hist%C3%B3ria%20de%20cuidado" style="color:var(--primary-dark);font-weight:600">pitoco.fsb2013@gmail.com</a> — algumas histórias podem ser compartilhadas no nosso blog, o <b>"As Duas Pontas"</b> (<a href="https://asmcodefisrtone.github.io/as-duas-pontas/" target="_blank" rel="noopener" style="color:var(--primary-dark);font-weight:600">asmcodefisrtone.github.io/as-duas-pontas</a> — ainda em construção), com seu nome ou anônimas, como você preferir.
       </div>
     </div>
   </section>
@@ -939,7 +949,15 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.4"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.5: (1) corrigido o "flash" da tela de login aparecendo por um instante a cada reload
+// (ex: ao fechar o zoom de um gráfico) — script inline no <head>, ANTES de qualquer coisa
+// pintar na tela, já adiciona a classe "pitoco-logado" no <html> se a sessão já estava
+// autenticada, e o CSS (html.pitoco-logado #gate{display:none} / #app{display:block}) evita
+// o flash mostrando a tela de login sem precisar esperar o JS do body rodar. (2) Corrigido o
+// texto da aba Nossa História: dizia que histórias seriam compartilhadas "aqui no app", mas
+// o combinado sempre foi fora dele. Agora aponta pro blog "As Duas Pontas"
+// (asmcodefisrtone.github.io/as-duas-pontas), com aviso de que ainda está em construção.
 // Rev008.4: dois bugs corrigidos da Rev008.3. (1) Conteúdo sumindo no Relatório mensal/semanal
 // depois do reload automático (só sobravam os botões de exportar): _restaurarUltimaAba()
 // clicava na aba cedo demais, antes do Firestore entregar os registros pela 1ª vez — o
