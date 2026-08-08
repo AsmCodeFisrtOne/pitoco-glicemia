@@ -626,11 +626,11 @@ if ('serviceWorker' in navigator) {
       <button class="btn" onclick="salvarProtocoloHipo()">Salvar protocolo</button>
     </div>
     <div class="card" id="card-dias-glicemicos" style="border:2px solid var(--accent-tint2, #c9a227);display:none">
-      <h2>📊 Dias do agendamento glicêmico <span style="font-size:11px;font-weight:600;color:#8a5c14">(profissional de saúde / Engenharia)</span></h2>
+      <h2>📊 Dias da medição de acompanhamento <span style="font-size:11px;font-weight:600;color:#8a5c14">(profissional de saúde / Engenharia)</span></h2>
       <p style="font-size:13px;color:var(--muted);margin-top:0">
         Marque em quais dias da semana o app deve pedir a medição de acompanhamento, 6h após a 1ª insulina daquele
-        dia. Pode marcar mais de um dia, ou nenhum — deixando tudo desmarcado, o agendamento glicêmico fica
-        desativado (sem banner, sem notificação, sem selo na Agenda) até você marcar algum dia de novo.
+        dia. Pode marcar mais de um dia, ou nenhum — deixando tudo desmarcado, a medição de acompanhamento fica
+        desativada (sem banner, sem notificação, sem selo na Agenda) até você marcar algum dia de novo.
       </p>
       <div id="cfg-dias-glicemicos-checks" style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0"></div>
       <button class="btn" onclick="salvarDiasGlicemicos()">Salvar dias</button>
@@ -665,8 +665,8 @@ if ('serviceWorker' in navigator) {
       </p>
       <div class="btn-row" style="flex-wrap:wrap">
         <button class="btn secondary" onclick="debugInjetarAgendaFake()">Injetar compromisso de agenda fake (hoje, daqui a 1h)</button>
-        <button class="btn secondary" onclick="debugSimularHojeGlicemico()">Marcar hoje como dia glicêmico (só visual, sem salvar)</button>
-        <button class="btn secondary" onclick="debugDesativarGlicemicoVisual()">Simular agendamento glicêmico desativado (0 dias)</button>
+        <button class="btn secondary" onclick="debugSimularHojeGlicemico()">Marcar hoje como dia de medição (só visual, sem salvar)</button>
+        <button class="btn secondary" onclick="debugDesativarGlicemicoVisual()">Simular medição de acompanhamento desativada (0 dias)</button>
       </div>
     </div>
   </section>
@@ -843,11 +843,11 @@ if ('serviceWorker' in navigator) {
     </div>
   </section>
 
-  <!-- ---------- AGENDA (compromissos semanais + sinalização do agendamento glicêmico) ---------- -->
+  <!-- ---------- AGENDA (compromissos semanais + sinalização da medição de acompanhamento) ---------- -->
   <section class="panel" id="tab-agenda">
     <div class="card">
       <h2>📅 Agenda semanal</h2>
-      <div class="notice">Compromissos que se repetem toda semana (ex: caminhada, fisioterapia). Qualquer acesso pode adicionar ou remover. O selo 📊 marca os dias com agendamento glicêmico (a hora exata varia — veja a configuração em Configurações, disponível pra profissional de saúde/Engenharia).</div>
+      <div class="notice">Compromissos que se repetem toda semana (ex: caminhada, fisioterapia). Qualquer acesso pode adicionar ou remover. O selo 📊 marca os dias com medição de acompanhamento agendada (a hora exata varia — veja a configuração em Configurações, disponível pra profissional de saúde/Engenharia).</div>
       <div class="two-col" style="margin:12px 0">
         <div class="field">
           <label>Dia da semana</label>
@@ -939,16 +939,22 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.1"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.1: renomeado "agendamento glicêmico" para "medição de acompanhamento" em todo o app
+// (título do card em Configurações, texto de ajuda, notice da Agenda, tooltip do selo 📊,
+// botões de debug, mensagens de alerta). Motivo: o termo "glicêmico" se confundia com a aba
+// "Curva glicêmica" — são coisas bem diferentes (a curva é detalhada, com várias medições no
+// dia; isso aqui é só o lembrete de UMA medição de acompanhamento, 6h após a insulina).
+// Nenhuma lógica mudou, é renomeação de texto/rótulo apenas.
 // Rev008.0: painel de debug (Engenharia) ganhou uma seção "📅 Testar Agenda (normal +
 // glicêmica)": (1) injeta um compromisso de agenda fake pra hoje, daqui a 1h, só em memória;
-// (2) marca hoje como dia glicêmico visualmente (sem salvar no Firestore), pra testar o selo
-// 📊; (3) simula o agendamento glicêmico totalmente desativado (0 dias), pra testar que o
+// (2) marca hoje como dia de medição de acompanhamento visualmente (sem salvar no Firestore), pra testar o selo
+// 📊; (3) simula a medição de acompanhamento totalmente desativada (0 dias), pra testar que o
 // selo/banner somem certinho. Todos os 3 levam direto pra aba Agenda pra ver o resultado.
 // Confirmado: as mudanças da Rev007.8/007.9 não quebraram o debug existente do lembrete —
 // ele manipula _lembreteState.proximaData diretamente, sem depender de diasSemana.
-// Rev007.9: agora é possível desativar o agendamento glicêmico por completo, deixando todos
-// os dias desmarcados em Configurações → "📊 Dias do agendamento glicêmico" — antes o app
+// Rev007.9: agora é possível desativar a medição de acompanhamento por completo, deixando todos
+// os dias desmarcados em Configurações → "📊 Dias da medição de acompanhamento" — antes o app
 // obrigava pelo menos 1 dia marcado. Com tudo desmarcado: diasSemana fica [], proximaData vira
 // null, e verificarLembreteMedicao() para de mostrar banner/notificação e esconde qualquer um
 // que estivesse ativo (chama _esconderBannerLembrete() nesse caso). O selo 📊 some da Agenda.
@@ -956,11 +962,11 @@ const APP_VERSION = "Beta_Rev008.0"; // formato correto: a cada +0.1, ao passar 
 // intacto.
 // Rev007.8: nova aba "📅 Agenda", visível pra todos os acessos. (1) Compromissos semanais
 // recorrentes (dia + hora início/fim opcional + descrição), coleção Firestore 'agenda',
-// qualquer acesso pode adicionar/excluir. (2) Dias com agendamento glicêmico aparecem com um
+// qualquer acesso pode adicionar/excluir. (2) Dias com medição de acompanhamento aparecem com um
 // selo 📊 no cabeçalho do dia, SEM mostrar horário (o gatilho real continua sendo 6h após a
 // insulina, evento, não hora fixa). (3) O lembrete de medição pós-insulina, antes travado em
 // "sempre segunda", agora aceita MÚLTIPLOS dias da semana configuráveis — nova config em
-// Configurações → "📊 Dias do agendamento glicêmico" (profissional de saúde/Engenharia),
+// Configurações → "📊 Dias da medição de acompanhamento" (profissional de saúde/Engenharia),
 // substitui config/lembreteCurva.proximaData sozinho por diasSemana (array) + proximaData.
 // Toda a engine (_proximoDiaGlicemicoAPartirDe, _carregarLembreteState) foi generalizada
 // mantendo compatibilidade — instalações antigas sem diasSemana salvo continuam assumindo
@@ -1605,7 +1611,7 @@ function aplicarModoAcesso(){
   // campo de protocolo personalizado de hipoglicemia — mesma regra de acesso da aba Correção
   const cardProtocoloHipo = document.getElementById('card-protocolo-hipo');
   if(cardProtocoloHipo) cardProtocoloHipo.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
-  // configuração dos dias do agendamento glicêmico — mesma regra
+  // configuração dos dias da medição de acompanhamento — mesma regra
   const cardDiasGlicemicos = document.getElementById('card-dias-glicemicos');
   if(cardDiasGlicemicos) cardDiasGlicemicos.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
 }
@@ -2154,7 +2160,7 @@ function _dataYMD(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullY
 const DIAS_SEMANA_NOMES = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 const DIAS_SEMANA_ABREV = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 function _proximoDiaGlicemicoAPartirDe(d, diasSemana){
-  if(!diasSemana || !diasSemana.length) return null; // agendamento glicêmico desativado — sem próxima data
+  if(!diasSemana || !diasSemana.length) return null; // medição de acompanhamento desativada — sem próxima data
   for(let i=0; i<7; i++){
     const alvo = new Date(d); alvo.setDate(d.getDate()+i); alvo.setHours(0,0,0,0);
     if(diasSemana.includes(alvo.getDay())) return _dataYMD(alvo);
@@ -2190,7 +2196,7 @@ function renderCheckboxesDiasGlicemicos(){
 }
 async function salvarDiasGlicemicos(){
   const marcados = Array.from(document.querySelectorAll('#cfg-dias-glicemicos-checks input:checked')).map(el=>parseInt(el.value,10));
-  // pode ficar vazio de propósito — a médica pode decidir desativar o agendamento glicêmico
+  // pode ficar vazio de propósito — a médica pode decidir desativar a medição de acompanhamento
   _lembreteState.diasSemana = marcados;
   await db.collection('config').doc('lembreteCurva').set({diasSemana: marcados}, {merge:true});
   if(!marcados.length){
@@ -2204,7 +2210,7 @@ async function salvarDiasGlicemicos(){
   }
   verificarLembreteMedicao();
   renderAgenda();
-  await customAlert(marcados.length ? 'Dias do agendamento glicêmico salvos.' : 'Agendamento glicêmico desativado — nenhum dia selecionado.');
+  await customAlert(marcados.length ? 'Dias da medição de acompanhamento salvos.' : 'Medição de acompanhamento desativada — nenhum dia selecionado.');
 }
 
 /* ---------------- AGENDA (compromissos semanais recorrentes) ---------------- */
@@ -2225,7 +2231,7 @@ function renderAgenda(){
       <div class="card" style="margin-bottom:10px;padding:12px 16px">
         <div style="display:flex;align-items:center;gap:8px">
           <h3 style="margin:0;font-size:14.5px">${nome}</h3>
-          ${temGlicemico ? '<span title="Agendamento glicêmico" style="font-size:13px">📊</span>' : ''}
+          ${temGlicemico ? '<span title="Medição de acompanhamento agendada" style="font-size:13px">📊</span>' : ''}
         </div>
         ${itensDoDia.length ? linhasItens : '<div style="font-size:12.5px;color:var(--muted);padding-top:6px">Nenhum compromisso.</div>'}
       </div>`;
@@ -2247,7 +2253,7 @@ async function excluirAgendaItem(id){
 }
 
 function verificarLembreteMedicao(agora = new Date()){
-  if(!_lembreteState.proximaData){ _esconderBannerLembrete(); return; } // ainda carregando OU agendamento glicêmico desativado (sem nenhum dia marcado)
+  if(!_lembreteState.proximaData){ _esconderBannerLembrete(); return; } // ainda carregando OU medição de acompanhamento desativada (sem nenhum dia marcado)
   const hojeStr = _dataYMD(agora);
   if(hojeStr < _lembreteState.proximaData){ _esconderBannerLembrete(); return; }
 
