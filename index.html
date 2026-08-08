@@ -16,6 +16,9 @@ if (sessionStorage.getItem('pitoco_auth') === '1') {
 <meta name="theme-color" content="#1D4E4E">
 <link rel="icon" href="icon-192x192.png">
 <link rel="apple-touch-icon" href="icon-180x180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pitoco">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="Pitoco">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -981,7 +984,11 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.7"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.8"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.8: adicionadas as tags específicas do iOS que faltavam (apple-mobile-web-app-capable,
+// apple-mobile-web-app-status-bar-style, apple-mobile-web-app-title) — sem elas, "Adicionar à
+// Tela de Início" no iPhone abria uma aba comum do Safari, não um app instalado de verdade
+// (sem a barra do navegador). O ícone (apple-touch-icon) já estava correto desde antes.
 // Rev008.7: revisão gramatical em todo o app — padronizado o registro para "para" em vez de
 // "pra"/"pro"/"pras"/"pros" (95 ocorrências, tanto em texto visível quanto em comentários de
 // código), deixando o tom mais formal/neutro em todo o app. Revisão manual dos principais
