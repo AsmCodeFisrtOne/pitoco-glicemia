@@ -658,6 +658,16 @@ if ('serviceWorker' in navigator) {
         <button class="btn" onclick="debugRodarAgora()">✅ Rodar verificação com o horário real de agora</button>
         <button class="btn danger" onclick="debugLimparTeste()">🔄 Limpar teste e recarregar a página</button>
       </div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+      <h3 style="font-size:14px;margin-bottom:4px">📅 Testar Agenda (normal + glicêmica)</h3>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:0">
+        Também só em memória — nada grava no Firestore. Vai pra aba Agenda pra ver o resultado; recarregar a página descarta tudo.
+      </p>
+      <div class="btn-row" style="flex-wrap:wrap">
+        <button class="btn secondary" onclick="debugInjetarAgendaFake()">Injetar compromisso de agenda fake (hoje, daqui a 1h)</button>
+        <button class="btn secondary" onclick="debugSimularHojeGlicemico()">Marcar hoje como dia glicêmico (só visual, sem salvar)</button>
+        <button class="btn secondary" onclick="debugDesativarGlicemicoVisual()">Simular agendamento glicêmico desativado (0 dias)</button>
+      </div>
     </div>
   </section>
 
@@ -929,7 +939,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev007.9"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.0"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.0: painel de debug (Engenharia) ganhou uma seção "📅 Testar Agenda (normal +
+// glicêmica)": (1) injeta um compromisso de agenda fake pra hoje, daqui a 1h, só em memória;
+// (2) marca hoje como dia glicêmico visualmente (sem salvar no Firestore), pra testar o selo
+// 📊; (3) simula o agendamento glicêmico totalmente desativado (0 dias), pra testar que o
+// selo/banner somem certinho. Todos os 3 levam direto pra aba Agenda pra ver o resultado.
+// Confirmado: as mudanças da Rev007.8/007.9 não quebraram o debug existente do lembrete —
+// ele manipula _lembreteState.proximaData diretamente, sem depender de diasSemana.
 // Rev007.9: agora é possível desativar o agendamento glicêmico por completo, deixando todos
 // os dias desmarcados em Configurações → "📊 Dias do agendamento glicêmico" — antes o app
 // obrigava pelo menos 1 dia marcado. Com tudo desmarcado: diasSemana fica [], proximaData vira
@@ -2383,6 +2400,38 @@ function debugRodarAgora(){
 
 function debugLimparTeste(){
   location.reload();
+}
+
+/* ---------------- DEBUG: AGENDA (normal + glicêmica) — Rev008.0 ---------------- */
+function debugInjetarAgendaFake(){
+  const agora = new Date();
+  const daquiA1h = new Date(agora.getTime() + 3600000);
+  const p = n=>String(n).padStart(2,'0');
+  agendaItens.push({
+    id: '_debug_'+Date.now(),
+    _debugFake: true,
+    diaSemana: agora.getDay(),
+    horaInicio: `${p(daquiA1h.getHours())}:${p(daquiA1h.getMinutes())}`,
+    horaFim: null,
+    titulo: '(teste debug) Caminhar'
+  });
+  renderAgenda();
+  document.querySelector('[data-tab="agenda"]').click();
+}
+function debugSimularHojeGlicemico(){
+  const hoje = new Date().getDay();
+  if(!_lembreteState.diasSemana.includes(hoje)){
+    _lembreteState.diasSemana = [..._lembreteState.diasSemana, hoje]; // só em memória — não salva no Firestore
+  }
+  renderCheckboxesDiasGlicemicos();
+  renderAgenda();
+  document.querySelector('[data-tab="agenda"]').click();
+}
+function debugDesativarGlicemicoVisual(){
+  _lembreteState.diasSemana = []; // só em memória
+  renderCheckboxesDiasGlicemicos();
+  renderAgenda();
+  document.querySelector('[data-tab="agenda"]').click();
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
