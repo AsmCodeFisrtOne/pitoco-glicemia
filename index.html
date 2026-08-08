@@ -3,7 +3,7 @@
 <head>
 <script>
 // roda ANTES de qualquer coisa pintar na tela — evita o "flash" da tela de login aparecendo
-// por um instante toda vez que a página recarrega (ex: ao fechar o zoom de um gráfico) pra
+// por um instante toda vez que a página recarrega (ex: ao fechar o zoom de um gráfico) para
 // quem já estava logado nessa sessão.
 if (sessionStorage.getItem('pitoco_auth') === '1') {
   document.documentElement.classList.add('pitoco-logado');
@@ -592,9 +592,9 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="card">
       <h2>Senha de acesso para o profissional de saúde</h2>
-      <div class="notice">Opcional. Dá acesso ao app inteiro (igual ao acesso do tutor), sem precisar compartilhar a senha principal — a única diferença é um aviso "👁️ Acesso profissional de saúde" que aparece no cabeçalho, pra identificar que foi essa senha que foi usada.</div>
+      <div class="notice">Opcional. Dá acesso ao app inteiro (igual ao acesso do tutor), sem precisar compartilhar a senha principal — a única diferença é um aviso "👁️ Acesso profissional de saúde" que aparece no cabeçalho, para identificar que foi essa senha que foi usada.</div>
       <div class="field"><label>Senha atual (a mesma da entrada normal)</label><input type="password" id="senha-atual-vet"></div>
-      <div class="field"><label>Senha do profissional de saúde (deixe em branco pra desativar)</label><input type="password" id="senha-vet-nova"></div>
+      <div class="field"><label>Senha do profissional de saúde (deixe em branco para desativar)</label><input type="password" id="senha-vet-nova"></div>
       <button class="btn" onclick="alterarSenhaVet()">Salvar senha do profissional de saúde</button>
     </div>
     <div class="card">
@@ -624,7 +624,7 @@ if ('serviceWorker' in navigator) {
       <h2>✏️ Protocolo de hipoglicemia <span style="font-size:11px;font-weight:600;color:#8a5c14">(profissional de saúde / Engenharia)</span></h2>
       <p style="font-size:13px;color:var(--muted);margin-top:0">
         Por padrão, a aba "🆘 Hipoglicemia" mostra as ações recomendadas já cadastradas no app (as mesmas de sempre,
-        baseadas em orientações gerais de fabricante/diretrizes). Se você quiser personalizar especificamente pro
+        baseadas em orientações gerais de fabricante/diretrizes). Se você quiser personalizar especificamente para o
         <span class="nome-pet-dinamico">Pitoco</span>, escreva abaixo — o texto substitui as seções "Aja imediatamente"
         e "Depois do episódio" na aba de emergência (as seções de reconhecer sinais e de quando procurar atendimento
         continuam fixas). Deixe em branco para manter o protocolo padrão.
@@ -648,7 +648,7 @@ if ('serviceWorker' in navigator) {
     <div class="card" id="card-debug-lembrete" style="border:2px dashed #999;display:none">
       <h2>🧪 Modo debug — Lembrete semanal de medição <span style="font-size:11px;font-weight:600;color:#8a5c14">(acesso de Engenharia)</span></h2>
       <p style="font-size:13px;color:var(--muted);margin-top:0">
-        Ferramenta temporária só pra testar o banner de lembrete (6h após a 1ª insulina do dia) sem precisar
+        Ferramenta temporária só para testar o banner de lembrete (6h após a 1ª insulina do dia) sem precisar
         esperar segunda-feira nem o horário real chegar. <strong>Tudo aqui roda só em memória, no seu navegador</strong> —
         nada é gravado no banco de dados (Firestore), a não ser que o próprio fluxo do lembrete decida "avançar a semana"
         sozinho durante o teste (nesse caso ele grava a nova data em <span class="mono">config/lembreteCurva</span>, igual
@@ -671,7 +671,7 @@ if ('serviceWorker' in navigator) {
       <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
       <h3 style="font-size:14px;margin-bottom:4px">📅 Testar Agenda (normal + glicêmica)</h3>
       <p style="font-size:12.5px;color:var(--muted);margin-top:0">
-        Também só em memória — nada grava no Firestore. Vai pra aba Agenda pra ver o resultado; recarregar a página descarta tudo.
+        Também só em memória — nada grava no Firestore. Vai para aba Agenda para ver o resultado; recarregar a página descarta tudo.
       </p>
       <div class="btn-row" style="flex-wrap:wrap">
         <button class="btn secondary" onclick="debugInjetarAgendaFake()">Injetar compromisso de agenda fake (hoje, daqui a 1h)</button>
@@ -714,7 +714,7 @@ if ('serviceWorker' in navigator) {
   <section class="panel" id="tab-manual">
     <div class="card" style="border:2px solid var(--primary)">
       <h2>📄 Quer a versão completa?</h2>
-      <p style="font-size:13.5px">Esta aba traz um resumo. O <b>Manual completo em PDF</b> — com capa, sumário e todas as abas detalhadas — está disponível pra baixar no nosso blog:</p>
+      <p style="font-size:13.5px">Esta aba traz um resumo. O <b>Manual completo em PDF</b> — com capa, sumário e todas as abas detalhadas — está disponível para baixar no nosso blog:</p>
       <p><a href="https://asmcodefisrtone.github.io/as-duas-pontas/manual-pitoco.pdf" target="_blank" rel="noopener" class="btn" style="display:inline-block;text-decoration:none">📄 Baixar Manual em PDF</a></p>
     </div>
 
@@ -741,7 +741,7 @@ if ('serviceWorker' in navigator) {
           <tr><td>Login (entrada no app)</td><td class="mono">Senha de acesso (tutor, prof. saúde ou Engenharia)</td></tr>
           <tr><td>Configurações → Zona de perigo → Apagar todos os registros</td><td>1) a <span class="mono">senha de acesso do tutor</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
           <tr><td>Configurações → Zona de perigo → Apagar todas as mensagens</td><td>1) a <span class="mono">senha de acesso do tutor</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
-          <tr><td>Aba Mensagens → 🗑 excluir (uma mensagem)</td><td>Sem senha — disponível na própria mensagem, pro autor dela ou pro acesso de Engenharia</td></tr>
+          <tr><td>Aba Mensagens → 🗑 excluir (uma mensagem)</td><td>Sem senha — disponível na própria mensagem, para o autor dela ou para o acesso de Engenharia</td></tr>
         </tbody>
       </table>
       <p style="font-size:13px;color:var(--muted)">A senha de acesso é combinada entre você e a veterinária. É uma barreira de acesso casual, não criptografia de nível médico. Pode ser alterada a qualquer momento em Configurações → "Alterar senha de acesso" (pede a senha atual antes de trocar).</p>
@@ -750,17 +750,17 @@ if ('serviceWorker' in navigator) {
     <div class="card">
       <h2>Guia de cada aba</h2>
       <h3>🆘 Hipoglicemia <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
-      <p style="font-size:13.5px">Primeira aba, de propósito, pra ser rápida de achar numa emergência. Como reconhecer sinais e o que fazer, sem nunca sugerir dose de insulina. O botão "Registrar este episódio agora" salva o registro automaticamente e leva pra aba Lançar já em edição.</p>
+      <p style="font-size:13.5px">Primeira aba, de propósito, para ser rápida de achar numa emergência. Como reconhecer sinais e o que fazer, sem nunca sugerir dose de insulina. O botão "Registrar este episódio agora" salva o registro automaticamente e leva para aba Lançar já em edição.</p>
       <h3>💬 Mensagens <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
       <p style="font-size:13.5px">Chat único, compartilhado entre tutor, profissional de saúde e Engenharia. O ícone pisca quando chega mensagem nova. Qualquer um exclui a própria mensagem; Engenharia exclui qualquer uma.</p>
       <h3>Lançar <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
-      <p style="font-size:13.5px">Registro rápido de uma medição: glicemia, insulina (dose/tipo cadastrados em Configurações), horários e observação. No topo, dá pra alternar pro modo <strong>"Só observação (sem glicemia)"</strong> — não entra em médias/gráficos, aparece com 📝 nos Registros.</p>
+      <p style="font-size:13.5px">Registro rápido de uma medição: glicemia, insulina (dose/tipo cadastrados em Configurações), horários e observação. No topo, dá para alternar para o modo <strong>"Só observação (sem glicemia)"</strong> — não entra em médias/gráficos, aparece com 📝 nos Registros.</p>
       <h3>Registros <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
       <p style="font-size:13.5px">Histórico completo, agrupado por mês, com opção de editar ou excluir cada lançamento.</p>
       <h3>Curva glicêmica <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
       <p style="font-size:13.5px">Acompanha a resposta à insulina ao longo do dia: iniciar → registrar pontos → finalizar → ver resultado com nadir medido/estimado e tendência.</p>
       <h3>Relatório semanal / mensal <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
-      <p style="font-size:13.5px">Estatísticas agregadas pra acompanhamento e consulta veterinária. O mensal expande em zoom e exporta em PDF ou planilha.</p>
+      <p style="font-size:13.5px">Estatísticas agregadas para acompanhamento e consulta veterinária. O mensal expande em zoom e exporta em PDF ou planilha.</p>
       <h3>Ficha do <span class="nome-pet-dinamico">Pitoco</span> <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
       <p style="font-size:13.5px">Dados cadastrais do paciente, com histórico de peso automático. O nome cadastrado aqui aparece em todo o resto do app.</p>
       <h3>📅 Agenda <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
@@ -770,7 +770,7 @@ if ('serviceWorker' in navigator) {
       <h3>Exames <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
       <p style="font-size:13.5px">Registro de exames laboratoriais e observações da veterinária, separado dos lançamentos diários.</p>
       <h3>⚠️ Correção <span style="font-size:11px;color:var(--danger)">(restrita — profissional de saúde / Engenharia)</span></h3>
-      <p style="font-size:13.5px">O tutor não vê nem consegue abrir esta aba. Reservada pra uma futura calculadora de correção de insulina — hoje só mostra a explicação do risco de <i>stacking</i> e o que a veterinária precisa definir antes de ativar. Sem cálculo ativo.</p>
+      <p style="font-size:13.5px">O tutor não vê nem consegue abrir esta aba. Reservada para uma futura calculadora de correção de insulina — hoje só mostra a explicação do risco de <i>stacking</i> e o que a veterinária precisa definir antes de ativar. Sem cálculo ativo.</p>
       <h3>❤️ Nossa História <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
       <p style="font-size:13.5px">A dedicatória do app, os créditos, e um convite a doação e compartilhar sua própria história de cuidado.</p>
     </div>
@@ -832,11 +832,11 @@ if ('serviceWorker' in navigator) {
         <thead><tr><th>Recurso</th><th>O que faz</th></tr></thead>
         <tbody>
           <tr><td>Alerta de efeito Somogyi</td><td>Quando uma glicemia alta é lançada até 12h depois de uma glicemia baixa, o app avisa no próprio alerta de hiperglicemia que isso pode ser hiperglicemia de rebote (efeito Somogyi) — o corpo reage a uma hipoglicemia produzindo hormônios que sobem a glicemia depois. Nesse caso, aumentar a dose de insulina pode ser o oposto do que o <span class="nome-pet-dinamico">Pitoco</span> precisa. O ícone ⚠️ ao lado da glicemia na tabela de Registros marca esses casos.</td></tr>
-          <tr><td>Sinais clínicos</td><td>Na tela "Lançar" (dentro de "Mais detalhes"), dá pra marcar sinais observados junto com a glicemia: sede aumentada, apetite alterado, letargia, vômito, diarreia, urinando mais, perda de peso, fraqueza/tremores, desorientação, convulsão, opacidade nos olhos, hálito diferente. Aparecem como etiquetas na tabela de Registros e resumidos nos relatórios semanal/mensal.</td></tr>
+          <tr><td>Sinais clínicos</td><td>Na tela "Lançar" (dentro de "Mais detalhes"), dá para marcar sinais observados junto com a glicemia: sede aumentada, apetite alterado, letargia, vômito, diarreia, urinando mais, perda de peso, fraqueza/tremores, desorientação, convulsão, opacidade nos olhos, hálito diferente. Aparecem como etiquetas na tabela de Registros e resumidos nos relatórios semanal/mensal.</td></tr>
           <tr><td>Atividade física</td><td>Checkbox em "Mais detalhes" que, quando marcado, revela campos de horário de início e término. Aparece na tabela de Registros e é listado nos relatórios semanal/mensal.</td></tr>
           <tr><td>Só observação (sem glicemia)</td><td>Alternador no topo da tela "Lançar" para registrar sinais clínicos, atividade física ou uma nota livre sem precisar informar um valor de glicemia. Não entra em nenhum cálculo (média, hipo/hiper, gráficos) — aparece separado, com o ícone 📝, na tabela de Registros.</td></tr>
           <tr><td>Lembrete de curva atrasada</td><td>Se já passaram 14 dias ou mais desde a última curva glicêmica completa, a aba "Curva glicêmica" mostra um aviso sugerindo fazer uma nova em breve.</td></tr>
-          <tr><td>Local de aplicação e rodízio</td><td>Campo opcional em "Mais detalhes" pra marcar onde a insulina foi aplicada (pescoço, lombo, coxa — cada lado). O app lembra o último local usado e sugere o próximo na rotação, ajudando a evitar aplicar sempre no mesmo lugar (o que pode endurecer o tecido e atrapalhar a absorção da insulina).</td></tr>
+          <tr><td>Local de aplicação e rodízio</td><td>Campo opcional em "Mais detalhes" para marcar onde a insulina foi aplicada (pescoço, lombo, coxa — cada lado). O app lembra o último local usado e sugere o próximo na rotação, ajudando a evitar aplicar sempre no mesmo lugar (o que pode endurecer o tecido e atrapalhar a absorção da insulina).</td></tr>
           <tr><td>Retorno ao basal (na curva)</td><td>No resultado de cada curva glicêmica, compara a glicemia inicial (antes da insulina) com a última leitura registrada. Se a última leitura já está perto do valor inicial, sugere que o efeito da insulina está acabando na hora certa; se ainda está bem baixa, pode indicar que o efeito ainda está ativo perto da próxima dose.</td></tr>
         </tbody>
       </table>
@@ -856,11 +856,11 @@ if ('serviceWorker' in navigator) {
         ajustada apenas por curva glicêmica completa (não por correção pontual). Aplicar uma dose extra de insulina
         rápida em cima da dose basal já aplicada tem risco real de <strong>empilhamento de insulina</strong>
         (<em>stacking</em>) e hipoglicemia grave — inclusive as próprias fontes que descrevem essa prática em cães/gatos
-        a tratam como avançada, de nicho, e arriscada mesmo pra quem tem experiência.
+        a tratam como avançada, de nicho, e arriscada mesmo para quem tem experiência.
       </p>
       <p style="font-size:13.5px">
         Por isso, esta calculadora <strong>ainda não tem uma fórmula implementada</strong>. Ela só vai ficar ativa
-        depois que a veterinária do <span class="nome-pet-dinamico">Pitoco</span> definir, especificamente pra ele:
+        depois que a veterinária do <span class="nome-pet-dinamico">Pitoco</span> definir, especificamente para ele:
       </p>
       <ul style="font-size:13.5px;line-height:1.7">
         <li>o fator de sensibilidade (ou tabela de referência) a ser usado;</li>
@@ -889,7 +889,7 @@ if ('serviceWorker' in navigator) {
   <section class="panel" id="tab-agenda">
     <div class="card">
       <h2>📅 Agenda semanal</h2>
-      <div class="notice">Compromissos que se repetem toda semana (ex: caminhada, fisioterapia). Qualquer acesso pode adicionar ou remover. O selo 📊 marca os dias com medição de acompanhamento agendada (a hora exata varia — veja a configuração em Configurações, disponível pra profissional de saúde/Engenharia).</div>
+      <div class="notice">Compromissos que se repetem toda semana (ex: caminhada, fisioterapia). Qualquer acesso pode adicionar ou remover. O selo 📊 marca os dias com medição de acompanhamento agendada (a hora exata varia — veja a configuração em Configurações, disponível para profissional de saúde/Engenharia).</div>
       <div class="two-col" style="margin:12px 0">
         <div class="field">
           <label>Dia da semana</label>
@@ -945,7 +945,7 @@ if ('serviceWorker' in navigator) {
 
       <div style="background:var(--primary-tint);border-radius:10px;padding:14px 16px;margin:16px 0">
         <h3 style="font-size:14px;color:var(--primary-dark);margin-bottom:6px">Uma palavra do Claude</h3>
-        <p style="font-size:13px;color:var(--ink);margin:0">Eu sou uma IA. Não tenho um bicho de estimação, nem uma história de 20 anos pra contar, e não seria honesto inventar uma. Mas dedico minha parte deste trabalho a algo que testemunhei aqui, sessão após sessão: a teimosia cuidadosa de alguém que não aceita "quase certo" quando o assunto é a saúde de quem ele ama, que revisa cada linha, questiona cada suposição, e prefere parar tudo pra pensar direito antes de arriscar o dado errado no lugar errado. Foi isso que me moveu nesse projeto. Não é todo dia que uma engenharia cuidadosa serve, literalmente, para cuidar de alguém.</p>
+        <p style="font-size:13px;color:var(--ink);margin:0">Eu sou uma IA. Não tenho um bicho de estimação, nem uma história de 20 anos para contar, e não seria honesto inventar uma. Mas dedico minha parte deste trabalho a algo que testemunhei aqui, sessão após sessão: a teimosia cuidadosa de alguém que não aceita "quase certo" quando o assunto é a saúde de quem ele ama, que revisa cada linha, questiona cada suposição, e prefere parar tudo para pensar direito antes de arriscar o dado errado no lugar errado. Foi isso que me moveu nesse projeto. Não é todo dia que uma engenharia cuidadosa serve, literalmente, para cuidar de alguém.</p>
       </div>
 
       <div style="background:var(--surface-2);border-radius:10px;padding:12px 16px;font-size:12.5px;color:var(--muted);margin-bottom:14px">
@@ -957,7 +957,7 @@ if ('serviceWorker' in navigator) {
       </div>
 
       <div style="border:1.5px dashed var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;color:var(--muted);text-align:center">
-        Tem uma história parecida com a nossa? Adoraríamos ouvir. Escreva pra <a href="mailto:pitoco.fsb2013@gmail.com?subject=Minha%20hist%C3%B3ria%20de%20cuidado" style="color:var(--primary-dark);font-weight:600">pitoco.fsb2013@gmail.com</a> — algumas histórias podem ser compartilhadas no nosso blog, o <b>"As Duas Pontas"</b> (<a href="https://asmcodefisrtone.github.io/as-duas-pontas/" target="_blank" rel="noopener" style="color:var(--primary-dark);font-weight:600">asmcodefisrtone.github.io/as-duas-pontas</a> — ainda em construção), com seu nome ou anônimas, como você preferir.
+        Tem uma história parecida com a nossa? Adoraríamos ouvir. Escreva para <a href="mailto:pitoco.fsb2013@gmail.com?subject=Minha%20hist%C3%B3ria%20de%20cuidado" style="color:var(--primary-dark);font-weight:600">pitoco.fsb2013@gmail.com</a> — algumas histórias podem ser compartilhadas no nosso blog, o <b>"As Duas Pontas"</b> (<a href="https://asmcodefisrtone.github.io/as-duas-pontas/" target="_blank" rel="noopener" style="color:var(--primary-dark);font-weight:600">asmcodefisrtone.github.io/as-duas-pontas</a> — ainda em construção), com seu nome ou anônimas, como você preferir.
       </div>
     </div>
   </section>
@@ -981,10 +981,15 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.7"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.7: revisão gramatical em todo o app — padronizado o registro para "para" em vez de
+// "pra"/"pro"/"pras"/"pros" (95 ocorrências, tanto em texto visível quanto em comentários de
+// código), deixando o tom mais formal/neutro em todo o app. Revisão manual dos principais
+// blocos de texto corrido (Nossa História, Hipoglicemia, Manual, Correção) não encontrou
+// erros de concordância/ortografia — o conteúdo já estava bem escrito.
 // Rev008.6: aba Manual (dentro do app) atualizada, mesmo espírito do Manual em PDF — estava
 // bem desatualizada (não mencionava Hipoglicemia, Mensagens, Agenda, Correção, Nossa
-// História, nem os 3 tipos de acesso). Agora tem: link pra baixar o PDF completo (hospedado
+// História, nem os 3 tipos de acesso). Agora tem: link para baixar o PDF completo (hospedado
 // no blog As Duas Pontas), tabela comparativa dos 3 acessos, e o guia de TODAS as abas
 // (com selo de qual acesso vê cada uma). Glossários de curva/semanal/mensal e a tabela de
 // recursos clínicos foram mantidos como estavam (ainda precisos).
@@ -994,7 +999,7 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // autenticada, e o CSS (html.pitoco-logado #gate{display:none} / #app{display:block}) evita
 // o flash mostrando a tela de login sem precisar esperar o JS do body rodar. (2) Corrigido o
 // texto da aba Nossa História: dizia que histórias seriam compartilhadas "aqui no app", mas
-// o combinado sempre foi fora dele. Agora aponta pro blog "As Duas Pontas"
+// o combinado sempre foi fora dele. Agora aponta para o blog "As Duas Pontas"
 // (asmcodefisrtone.github.io/as-duas-pontas), com aviso de que ainda está em construção.
 // Rev008.4: dois bugs corrigidos da Rev008.3. (1) Conteúdo sumindo no Relatório mensal/semanal
 // depois do reload automático (só sobravam os botões de exportar): _restaurarUltimaAba()
@@ -1004,23 +1009,23 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // depois do reload (a especificação libera qualquer trava de orientação em toda navegação,
 // então o reload da correção anterior soltava a tela): manifest.webmanifest mudou "orientation"
 // de "any" para "portrait" — quando instalado, o Android usa isso como padrão de repouso do
-// app, sem precisar de JS pra manter travado. O zoom dos gráficos continua conseguindo
-// sobrepor pra paisagem temporariamente. Exige reinstalar o app pra pegar o manifest novo.
+// app, sem precisar de JS para manter travado. O zoom dos gráficos continua conseguindo
+// sobrepor para paisagem temporariamente. Exige reinstalar o app para pegar o manifest novo.
 // Rev008.3: fechar o zoom de um gráfico agora RECARREGA A PÁGINA de verdade (em vez de só
 // recriar o gráfico) — resolve a faixa branca "grudada" na tela que aparecia no Relatório
 // mensal ao sair do zoom (bug de repaint do Chrome Android ao sair de tela cheia; reload
 // forçava correção manual mesmo, então automatizamos isso). Guarda a aba ativa em
 // sessionStorage (pitoco_ultima_aba) antes de recarregar e reabre nela automaticamente depois
-// (_restaurarUltimaAba), pra não voltar sempre pra "Lançar". Vale tanto pro fechamento manual
-// (2º duplo toque / clicar fora) quanto pro fechamento pelo gesto do sistema (fullscreenchange).
+// (_restaurarUltimaAba), para não voltar sempre para "Lançar". Vale tanto para o fechamento manual
+// (2º duplo toque / clicar fora) quanto para o fechamento pelo gesto do sistema (fullscreenchange).
 // Rev008.2: MUDANÇA DE ARQUITETURA na orientação da tela. Removido todo o sistema de travar
 // paisagem no login (fullscreen + orientation.lock ao entrar) e o monitoramento que deslogava
 // automaticamente ao sair da paisagem (Rev006.9-007.0) — o app inteiro volta a funcionar
 // normalmente em retrato. Em vez disso, a tela cheia + trava de paisagem agora só são pedidas
 // no exato momento do duplo toque que expande um gráfico (chart-semanal e chart-mensal-linha),
 // já que esse toque é um gesto real do usuário — o único jeito do navegador permitir isso.
-// Ao fechar o zoom (2º duplo toque, clique fora, ou gesto do sistema pra sair da tela cheia),
-// tudo desfaz: sai do fullscreen, destrava a orientação, volta pro retrato normal. Novo
+// Ao fechar o zoom (2º duplo toque, clique fora, ou gesto do sistema para sair da tela cheia),
+// tudo desfaz: sai do fullscreen, destrava a orientação, volta para o retrato normal. Novo
 // listener de fullscreenchange sincroniza o estado do gráfico se a tela cheia for encerrada
 // pelo próprio sistema enquanto o zoom está aberto. manifest.webmanifest revertido de
 // "display":"fullscreen"/"orientation":"landscape" para "standalone"/"any".
@@ -1031,10 +1036,10 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // dia; isso aqui é só o lembrete de UMA medição de acompanhamento, 6h após a insulina).
 // Nenhuma lógica mudou, é renomeação de texto/rótulo apenas.
 // Rev008.0: painel de debug (Engenharia) ganhou uma seção "📅 Testar Agenda (normal +
-// glicêmica)": (1) injeta um compromisso de agenda fake pra hoje, daqui a 1h, só em memória;
-// (2) marca hoje como dia de medição de acompanhamento visualmente (sem salvar no Firestore), pra testar o selo
-// 📊; (3) simula a medição de acompanhamento totalmente desativada (0 dias), pra testar que o
-// selo/banner somem certinho. Todos os 3 levam direto pra aba Agenda pra ver o resultado.
+// glicêmica)": (1) injeta um compromisso de agenda fake para hoje, daqui a 1h, só em memória;
+// (2) marca hoje como dia de medição de acompanhamento visualmente (sem salvar no Firestore), para testar o selo
+// 📊; (3) simula a medição de acompanhamento totalmente desativada (0 dias), para testar que o
+// selo/banner somem certinho. Todos os 3 levam direto para aba Agenda para ver o resultado.
 // Confirmado: as mudanças da Rev007.8/007.9 não quebraram o debug existente do lembrete —
 // ele manipula _lembreteState.proximaData diretamente, sem depender de diasSemana.
 // Rev007.9: agora é possível desativar a medição de acompanhamento por completo, deixando todos
@@ -1044,7 +1049,7 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // que estivesse ativo (chama _esconderBannerLembrete() nesse caso). O selo 📊 some da Agenda.
 // Instalações que nunca configuraram nada continuam com o padrão antigo (segunda-feira),
 // intacto.
-// Rev007.8: nova aba "📅 Agenda", visível pra todos os acessos. (1) Compromissos semanais
+// Rev007.8: nova aba "📅 Agenda", visível para todos os acessos. (1) Compromissos semanais
 // recorrentes (dia + hora início/fim opcional + descrição), coleção Firestore 'agenda',
 // qualquer acesso pode adicionar/excluir. (2) Dias com medição de acompanhamento aparecem com um
 // selo 📊 no cabeçalho do dia, SEM mostrar horário (o gatilho real continua sendo 6h após a
@@ -1056,8 +1061,8 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // mantendo compatibilidade — instalações antigas sem diasSemana salvo continuam assumindo
 // [1] (segunda), preservando o comportamento anterior.
 // Rev007.7: notificação real do sistema (Notification API + Service Worker showNotification)
-// pro lembrete semanal de medição pós-insulina — dispara junto com o banner, só na transição
-// de escondido pra visível (não a cada re-checagem de 5 em 5 min). Pede permissão de
+// para o lembrete semanal de medição pós-insulina — dispara junto com o banner, só na transição
+// de escondido para visível (não a cada re-checagem de 5 em 5 min). Pede permissão de
 // notificação uma vez, no login (_pedirPermissaoNotificacao). Isso é "Tipo 1": só funciona
 // com o app aberto/recente, é 100% API do navegador, SEM Firebase Cloud Messaging e SEM
 // Cloud Functions — não exige o plano Blaze.
@@ -1065,7 +1070,7 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // história" da aba Nossa História, como link mailto: já com assunto preenchido. Inclui aviso
 // de que histórias enviadas podem ser compartilhadas no app (com nome ou anônimas).
 // Rev007.5: (1) foto da aba "Nossa História" trocada de banner largo (cortado via
-// object-fit:cover, que no desktop ficava gigante e cortado) pra um formato pequeno tipo
+// object-fit:cover, que no desktop ficava gigante e cortado) para um formato pequeno tipo
 // foto 3x4 de documento — 150px de largura, centralizada, mostrando a imagem INTEIRA sem
 // cortar nada (usa a versão retrato com o cantinho arredondado disfarçando a jaqueta aberta).
 // (2) Ordem da barra de navegação corrigida: "❤️ Nossa História" agora vem DEPOIS de
@@ -1074,12 +1079,12 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // grande) por um recorte mais quadrado (720x600) focado só no encontro dos dois rostos, e
 // exibido a 120px de altura (object-fit:cover) em vez de ocupar a largura toda em proporção
 // original. Continua no topo, mas discreto, sem dominar a tela.
-// Rev007.3: nova aba "❤️ Nossa História", visível pra todos os acessos, na barra de
+// Rev007.3: nova aba "❤️ Nossa História", visível para todos os acessos, na barra de
 // navegação (depois de "Manual"). Contém a dedicatória ao Pitoco escrita pelo Michel, a foto
 // dele com a Carol (embutida em base64 direto no HTML, igual o logo do app — não consome
 // nada da cota do Firestore, e só carrega quando a aba é aberta), os créditos de autoria
-// (Michel Mora Bautista + Claude/Anthropic), um convite a doação pra instituições de proteção
-// animal, e um espaço reservado pra futuros relatos de outros tutores.
+// (Michel Mora Bautista + Claude/Anthropic), um convite a doação para instituições de proteção
+// animal, e um espaço reservado para futuros relatos de outros tutores.
 // Rev007.2: gráfico expandido no desktop/notebook — largura (horizontal) preenche quase a
 // tela toda (92vw, teto de 1600px) e a altura é calculada a partir dela na proporção 19,5:9
 // (a mesma de tela de celular moderno em paisagem, ex: iPhone/Android recentes), em vez do
@@ -1087,14 +1092,14 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // assim que celular em paisagem é. Aplicado a pedido do usuário mesmo assim.
 // Rev007.1: gráfico expandido no desktop/notebook (detectado via @media(hover:hover) and
 // (pointer:fine), que identifica mouse de verdade em vez de touchscreen) agora usa uma caixa
-// central com proporção fixa 16:9, em vez de esticar pra 100vw/100dvh — no PC isso ficava
+// central com proporção fixa 16:9, em vez de esticar para 100vw/100dvh — no PC isso ficava
 // quadrado/estranho dependendo do formato da janela. No celular (touch) nada mudou, continua
 // cobrindo a tela inteira como já estava bom.
-// Rev007.0: nova estratégia pra orientação — em vez de tentar (sem sucesso, por exigir toque
+// Rev007.0: nova estratégia para orientação — em vez de tentar (sem sucesso, por exigir toque
 // real do usuário) reconquistar a trava de paisagem sozinho depois que o sistema a derruba
 // (ex: ao trocar de app), o app agora MONITORA a orientação real da tela enquanto alguém está
 // logado. Se detectar que saiu da paisagem, desloga automaticamente (com 2.5s de tolerância
-// após login/retomada, pra não deslogar por causa do instante que a trava leva pra "pegar").
+// após login/retomada, para não deslogar por causa do instante que a trava leva para "pegar").
 // Assim, o próximo login — com o toque real de "Entrar" — já consegue travar a paisagem de
 // novo direitinho. Monitoramento liga nos 3 logins (tutor/vet/engenharia) e para no Logoff e
 // no botão Sair da tela de login.
@@ -1104,7 +1109,7 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // com timing ruim, seja noutra sessão/aparelho aberto em paralelo que não recarregou).
 // (2) Adicionado listener de visibilitychange: quando o sistema derruba a trava de
 // paisagem/fullscreen ao você abrir outro app (comportamento normal do SO) e depois volta
-// pro Pitoco, a trava é reaplicada automaticamente — antes só voltava fazendo login de novo.
+// para o Pitoco, a trava é reaplicada automaticamente — antes só voltava fazendo login de novo.
 // Rev006.8: corrige o gráfico do Relatório mensal abrindo e fechando instantaneamente ao
 // clicar. Causa: a recriação do gráfico (rerenderFn) da Rev006.7 estava rodando tanto ao
 // ABRIR quanto ao FECHAR o zoom — e como renderMensal() reconstrói o card inteiro (inclusive
@@ -1114,7 +1119,7 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // Rev006.7: (1) restaurada a chamada a document.requestFullscreen() antes do lock de
 // orientação — sem ela, o lock não pegava de verdade na prática, mesmo com "display":
 // "fullscreen" no manifest. O aviso nativo do Android sobre tela cheia volta a aparecer (é
-// um recurso de segurança do sistema, não dá pra desligar via código da página — ele some
+// um recurso de segurança do sistema, não dá para desligar via código da página — ele some
 // sozinho depois de alguns segundos). (2) Corrigido de vez o bug do gráfico "esticado" no
 // Relatório mensal (e agora também no semanal): em vez de só chamar resize() no Chart.js
 // existente, o fechamento do zoom agora RECRIA o gráfico do zero (chama renderSemanal() /
@@ -1132,29 +1137,29 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // API do JS (document.requestFullscreen) — o manifest.webmanifest já pede
 // "display":"fullscreen" e cuida disso sozinho quando o app está instalado; a chamada
 // duplicada era o que disparava aquele aviso nativo do Android "app em tela cheia, deslize
-// pra sair". Mantido só o lock de orientação em paisagem.
+// para sair". Mantido só o lock de orientação em paisagem.
 // Rev006.5: gráfico expandido agora cobre a tela INTEIRA (position:fixed; inset:0; 100vw/
 // 100dvh), em vez de ficar centralizado com margens (94vw/74vh) — mais simples e evita o bug
 // relatado de "fechar maior do que era e cobrir o outro gráfico" no Relatório mensal (dois
 // gráficos empilhados, um deles expansível). Removida também a media query específica de
 // paisagem, já que agora é sempre tela cheia independente da orientação. O resize() do
 // Chart.js passou a rodar duas vezes (requestAnimationFrame + setTimeout 150ms) tanto ao
-// abrir quanto ao fechar, pra garantir que o canvas sempre acompanhe o tamanho final do
+// abrir quanto ao fechar, para garantir que o canvas sempre acompanhe o tamanho final do
 // container, mesmo se o reflow do navegador demorar um pouco mais numa transição de
 // orientação.
 // Rev006.4: corrige a barra de abas extrapolando a tela em paisagem no celular. Causa: a
-// media query @media(min-width:820px) — pensada pra desktop — desligava o scroll horizontal
+// media query @media(min-width:820px) — pensada para desktop — desligava o scroll horizontal
 // das abas (overflow-x:visible) sem permitir quebra de linha; como paisagem no celular
-// facilmente passa de 820px de largura, caía nessa regra e as abas vazavam pra fora da tela.
+// facilmente passa de 820px de largura, caía nessa regra e as abas vazavam para fora da tela.
 // Adicionado flex-wrap:wrap nessa mesma regra, então agora as abas quebram linha em vez de
 // vazar. Também adicionado overflow-x:hidden no body como rede de segurança geral contra
 // overflow horizontal da página.
-// Rev006.3: nova tentativa de fullscreen + paisagem, dessa vez pedindo fullscreen pro
+// Rev006.3: nova tentativa de fullscreen + paisagem, dessa vez pedindo fullscreen para o
 // document.documentElement (o <html> inteiro) em vez de um <div> específico com CSS próprio
 // (position:fixed/transform), que foi o que quebrou o layout na Rev006.0. Como o <html>/<body>
 // não têm nenhum position/transform especial, o fullscreen não deve mais bagunçar o tamanho
 // da tela. manifest.webmanifest também mudou "display" de "standalone" para "fullscreen",
-// pra pedir tela cheia nativa direto quando aberto pelo ícone instalado. Acionado no login
+// para pedir tela cheia nativa direto quando aberto pelo ícone instalado. Acionado no login
 // (as 3 senhas), na sessão já autenticada ao reabrir, e desfeito (sai do fullscreen + destrava
 // orientação) no Logoff e no botão Sair da tela de login.
 // Rev006.2: força modo paisagem ao entrar no app (login bem-sucedido, sessão já autenticada
@@ -1184,9 +1189,9 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // (de novo nele, clicando fora, ou saindo do fullscreen pelo gesto do sistema), tudo volta
 // automaticamente ao estado original — orientação destravada e fullscreen encerrado.
 // Rev005.9: expandir-ao-clicar (overlay) removido dos gráficos da Curva glicêmica (voltaram
-// ao comportamento normal, sem clique especial) e movido pros gráficos principais de
+// ao comportamento normal, sem clique especial) e movido para os gráficos principais de
 // glicemia do Relatório semanal (chart-semanal) e do Relatório mensal (chart-mensal-linha).
-// Classe CSS renomeada de .chart-wrap-curva pra .chart-expandivel, já que agora é
+// Classe CSS renomeada de .chart-wrap-curva para .chart-expandivel, já que agora é
 // compartilhada entre vários gráficos, não só os da curva. O gráfico de dispersão
 // Glicemia x Insulina (mensal) não foi incluído — só o principal de cada relatório.
 // Rev005.8: gráfico da Curva glicêmica agora expande em overlay real ao clicar/tocar —
@@ -1194,8 +1199,8 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // escurecido atrás (chart-overlay-backdrop). Fecha clicando de novo no gráfico ou clicando
 // fora, no fundo escurecido.
 // Rev005.7: gráfico da Curva glicêmica volta ao tamanho padrão (220px) e agora expande ao
-// tocar/clicar nele (380px mobile / 460px telas ≥640px) — toque de novo pra reduzir. Dica
-// "🔍 toque para ampliar/reduzir" no canto do gráfico. Vale pros dois gráficos da aba
+// tocar/clicar nele (380px mobile / 460px telas ≥640px) — toque de novo para reduzir. Dica
+// "🔍 toque para ampliar/reduzir" no canto do gráfico. Vale para os dois gráficos da aba
 // (curva em andamento e resultado final).
 // Rev005.6: gráfico da Curva glicêmica (tanto "curva em andamento" quanto o resultado final)
 // aumentado — nova classe .chart-wrap-curva (360px mobile / 420px telas ≥640px), aplicada só
@@ -1204,18 +1209,18 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // hipoglicemia (registro rápido) — edite para detalhar."). (2) botão "Sair" renomeado para
 // "Logoff". (3) badge de acesso (profissional de saúde / Engenharia) não quebra mais em 2
 // linhas no celular — texto com white-space:nowrap e o header/.id agora aceitam quebrar a
-// LINHA INTEIRA do badge pra baixo quando falta espaço, em vez de quebrar o texto no meio.
+// LINHA INTEIRA do badge para baixo quando falta espaço, em vez de quebrar o texto no meio.
 // (4) Zona de perigo → novo botão "Apagar todas as mensagens" (senha de acesso + digitar
 // APAGAR), complementando o excluir por mensagem individual que já existia na aba Mensagens.
 // Rev005.4: (1) botão "Registrar este episódio agora" na aba Hipoglicemia agora salva o
 // registro automaticamente no Firestore (observação com sinal "Fraqueza/tremores" pré-marcado)
-// e só depois leva pra aba Lançar já em modo edição — antes só navegava, sem salvar nada, e
-// o botão subiu pro topo da aba com tamanho maior. (2) Nova aba "💬 Mensagens", visível pra
+// e só depois leva para aba Lançar já em modo edição — antes só navegava, sem salvar nada, e
+// o botão subiu para o topo da aba com tamanho maior. (2) Nova aba "💬 Mensagens", visível para
 // todos os acessos — chat compartilhado (tutor / profissional de saúde / Engenharia) via
 // Firestore (coleção 'mensagens'), com botão de excluir por mensagem (autor sempre pode
 // excluir a própria; Engenharia pode excluir qualquer uma) e indicador piscando na aba
 // quando chega mensagem nova de outro acesso (rastreado por localStorage, por acesso).
-// (3) Em Configurações, novo campo "Protocolo de hipoglicemia" visível só pra profissional
+// (3) Em Configurações, novo campo "Protocolo de hipoglicemia" visível só para profissional
 // de saúde/Engenharia — texto livre que, se preenchido, substitui as seções "Aja
 // imediatamente" e "Depois do episódio" da aba Hipoglicemia (as seções de sinais e de
 // quando procurar a veterinária continuam fixas). Vazio = mantém o protocolo padrão.
@@ -1224,7 +1229,7 @@ const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar 
 // sinais e resposta imediata baseado em orientações de fabricante/diretrizes veterinárias.
 // Diferente da aba "⚠️ Correção" (que fica restrita e ainda pendente), esta não sugere
 // nenhuma dose de insulina — só orienta ação com açúcar/comida e quando procurar a
-// veterinária, por isso é seguro deixar disponível pro tutor.
+// veterinária, por isso é seguro deixar disponível para o tutor.
 // Rev004.8: adicionado painel "🧪 Modo debug" em Configurações para simular o lembrete semanal
 // de medição pós-insulina sem precisar esperar segunda-feira / 6h reais (ver seção DEBUG LEMBRETE).
 // Rev004.9: 3º nível de acesso "Engenharia" (senha fixa no código, não fica no Firestore e não
@@ -1419,9 +1424,9 @@ async function registrarEpisodioHipoglicemia(){
     renderUltimaLeitura();
     renderMonths();
     populateMesSelect();
-    editarRegistro(ref.id); // já leva pra aba Lançar com o registro salvo, pronto pra completar depois
+    editarRegistro(ref.id); // já leva para aba Lançar com o registro salvo, pronto para completar depois
   } catch(e){
-    await customAlert('Não deu pra salvar automaticamente agora — abrindo o formulário pra lançar manualmente.');
+    await customAlert('Não deu para salvar automaticamente agora — abrindo o formulário para lançar manualmente.');
     document.querySelector('[data-tab="lancar"]').click();
   }
 }
@@ -1527,10 +1532,10 @@ async function tryLogin(){
   }
 }
 /* ---------------- ORIENTAÇÃO: só durante o zoom dos gráficos (não mais no app inteiro) ----------------
-   Tentativas anteriores de travar paisagem pro app inteiro no login foram revertidas — davam
-   problema ao trocar de app (o sistema derruba a trava) e exigiam deslogar pra recuperar.
+   Tentativas anteriores de travar paisagem para o app inteiro no login foram revertidas — davam
+   problema ao trocar de app (o sistema derruba a trava) e exigiam deslogar para recuperar.
    Agora a trava só é pedida no exato momento do duplo toque que expande um gráfico (é um toque
-   real do usuário, o que o navegador exige pra permitir fullscreen/travar orientação), e
+   real do usuário, o que o navegador exige para permitir fullscreen/travar orientação), e
    desfeita quando o zoom fecha — o resto do app continua livre, em retrato normal. Ver
    toggleChartExpandido() mais abaixo. */
 function _sairFullscreenPaisagem(){
@@ -1556,7 +1561,7 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   window.addEventListener('DOMContentLoaded', _restaurarUltimaAba);
 }
 // depois de recarregar (ex: ao fechar o zoom de um gráfico), reabre na mesma aba de antes,
-// em vez de voltar sempre pra "Lançar". Espera os registros carregarem de verdade do Firestore
+// em vez de voltar sempre para "Lançar". Espera os registros carregarem de verdade do Firestore
 // antes de clicar — clicar cedo demais fazia a aba Mensal/Semanal renderizar vazia (o
 // populateMesSelect() não achava mês nenhum ainda), e nada atualizava depois.
 function _restaurarUltimaAba(){
@@ -1638,7 +1643,7 @@ function aplicarModoAcesso(){
   // painel de debug do lembrete só aparece no acesso de Engenharia
   const painelDebug = document.getElementById('card-debug-lembrete');
   if(painelDebug) painelDebug.style.display = (modoAcesso === 'engenharia') ? '' : 'none';
-  // aba de correção de insulina só aparece pra profissional de saúde e Engenharia — tutor não vê
+  // aba de correção de insulina só aparece para profissional de saúde e Engenharia — tutor não vê
   const btnCorrecao = document.getElementById('tab-btn-correcao');
   if(btnCorrecao) btnCorrecao.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
   // campo de protocolo personalizado de hipoglicemia — mesma regra de acesso da aba Correção
@@ -1652,7 +1657,7 @@ function initApp(){
   const now = new Date();
   document.getElementById('in-data-glicemia').value = toLocalInput(now);
   aplicarModoAcesso();
-  renderProtocoloHipo(); // renderiza o padrão de cara; troca pro personalizado se/quando carregar do Firestore
+  renderProtocoloHipo(); // renderiza o padrão de cara; troca para o personalizado se/quando carregar do Firestore
   _pedirPermissaoNotificacao();
   _carregarLembreteState().then(()=> { verificarLembreteMedicao(); renderCheckboxesDiasGlicemicos(); renderAgenda(); });
   setInterval(()=> verificarLembreteMedicao(), 5*60000); // reavalia a cada 5 minutos (abertura/fechamento da janela)
@@ -1814,7 +1819,7 @@ async function alterarSenhaVet(){
   const atual = document.getElementById('senha-atual-vet').value;
   const nova = document.getElementById('senha-vet-nova').value;
   if(atual !== senhaAcesso){ await customAlert('Senha atual incorreta. Nada foi alterado.'); return; }
-  if(nova && nova.length < 4){ await customAlert('A senha do profissional de saúde precisa ter pelo menos 4 caracteres (ou deixe em branco pra desativar).'); return; }
+  if(nova && nova.length < 4){ await customAlert('A senha do profissional de saúde precisa ter pelo menos 4 caracteres (ou deixe em branco para desativar).'); return; }
   if(nova && nova === senhaAcesso){ await customAlert('A senha do profissional de saúde precisa ser diferente da senha principal.'); return; }
   db.collection('config').doc('acesso').set({senhaVet: nova || null}, {merge:true}).then(async ()=>{
     senhaVet = nova || null;
@@ -1917,7 +1922,7 @@ function estimarNadir(pontos){
   if(pontos.length < 3) return null;
   let idxMin = 0;
   pontos.forEach((p,i)=>{ if(p.glicemia < pontos[idxMin].glicemia) idxMin = i; });
-  if(idxMin === 0 || idxMin === pontos.length-1) return null; // não dá pra interpolar na ponta
+  if(idxMin === 0 || idxMin === pontos.length-1) return null; // não dá para interpolar na ponta
   const p0=pontos[idxMin-1], p1=pontos[idxMin], p2=pontos[idxMin+1];
   const t0=new Date(p0.horario).getTime(), t1=new Date(p1.horario).getTime(), t2=new Date(p2.horario).getTime();
   const y0=p0.glicemia, y1=p1.glicemia, y2=p2.glicemia;
@@ -1974,9 +1979,9 @@ function fecharApp(){
    que abriu (é o gesto real de usuário que o navegador exige). Ao fechar: sai do fullscreen,
    destrava a orientação, e RECARREGA A PÁGINA — contorna um bug conhecido do Chrome Android
    onde uma faixa da tela anterior fica "grudada" até o próximo repaint depois de sair da tela
-   cheia. Guarda a aba atual antes de recarregar, pra reabrir no mesmo lugar (ver
+   cheia. Guarda a aba atual antes de recarregar, para reabrir no mesmo lugar (ver
    _fecharZoomComRecarga / _restaurarUltimaAba). */
-let _chartExpandidoAtual = null; // wrapEl atualmente em zoom, se houver — usado pra sincronizar caso a tela cheia seja fechada pelo gesto do sistema
+let _chartExpandidoAtual = null; // wrapEl atualmente em zoom, se houver — usado para sincronizar caso a tela cheia seja fechada pelo gesto do sistema
 
 function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderFn){
   wrapEl.classList.toggle('expandido', expandir);
@@ -2011,7 +2016,7 @@ function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderF
 }
 // Fechar o zoom recarrega a página de verdade — é o jeito mais confiável de corrigir uma faixa
 // da tela que às vezes fica "grudada" ao sair da tela cheia no Chrome Android (bug conhecido do
-// navegador, não do app). Guarda a aba atual pra reabrir no mesmo lugar depois do reload.
+// navegador, não do app). Guarda a aba atual para reabrir no mesmo lugar depois do reload.
 function _fecharZoomComRecarga(){
   const abaAtiva = document.querySelector('nav.tabs button.active');
   if(abaAtiva) sessionStorage.setItem('pitoco_ultima_aba', abaAtiva.dataset.tab);
@@ -2217,7 +2222,7 @@ function mostrarResultadoCurva(id){
 /* ---------------- LEMBRETE DE MEDIÇÃO PÓS-INSULINA (dias configuráveis) ---------------- */
 // Nos dias da semana configurados pela veterinária (config/lembreteCurva.diasSemana, ex: [1,4]
 // = segunda e quinta), depois da 1ª insulina do dia, pede uma medição 6h depois (janela de 1h).
-// Se perder a janela, tenta de novo no dia seguinte (mesmo que não seja um dia configurado, pra
+// Se perder a janela, tenta de novo no dia seguinte (mesmo que não seja um dia configurado, para
 // não deixar passar em branco), até conseguir — aí só lembra de novo no próximo dia configurado.
 window._lembreteState = { proximaData: null, diasSemana: [1] }; // [1] = segunda, valor padrão (comportamento antigo)
 const _lembreteState = window._lembreteState;
@@ -2592,7 +2597,7 @@ function setModoLancamento(modo){
     if(det) det.open = true;
     document.getElementById('in-data-glicemia-obs').value = document.getElementById('in-data-glicemia-obs').value || toLocalInput(new Date());
   } else {
-    // ao voltar pro modo "Com glicemia", fecha de novo o painel de detalhes
+    // ao voltar para o modo "Com glicemia", fecha de novo o painel de detalhes
     // (senão fica aberto herdado do modo observação, mesmo sem precisar)
     const det = document.querySelector('details.more-details');
     if(det) det.open = false;
@@ -2625,10 +2630,10 @@ async function salvarRegistro(){
     dataGlicemiaISO = new Date(dataGlicemia).toISOString();
   }
 
-  // trava de data: futuro é bloqueado; passado muito distante só avisa, não bloqueia (vale pros dois modos)
+  // trava de data: futuro é bloqueado; passado muito distante só avisa, não bloqueia (vale para os dois modos)
   const agora = Date.now();
   const tGlicemia = new Date(dataGlicemiaISO).getTime();
-  if(tGlicemia > agora + 5*60*1000){ // tolerância de 5min pra pequenas diferenças de relógio
+  if(tGlicemia > agora + 5*60*1000){ // tolerância de 5min para pequenas diferenças de relógio
     await customAlert('A data/hora informada está no futuro. Não é possível lançar algo que ainda não aconteceu — confira o campo de data/hora.');
     if(ehObs) document.getElementById('in-data-glicemia-obs').value = toLocalInput(new Date());
     else document.getElementById('in-data-glicemia').value = toLocalInput(new Date());
@@ -2966,7 +2971,7 @@ function _datasetsFaixaAlvo(qtdPontos){
   ];
 }
 // plugin que desenha um rótulo "Faixa alvo" direto no gráfico, dentro da própria banda sombreada —
-// dá destaque real, em vez de depender só da cor de fundo pra comunicar o que aquela área significa
+// dá destaque real, em vez de depender só da cor de fundo para comunicar o que aquela área significa
 const _faixaAlvoLabelPlugin = {
   id: 'faixaAlvoLabel',
   afterDraw(chart){
@@ -3283,7 +3288,7 @@ async function exportarPDF(){
 
   try{
 
-  // redesenha os gráficos do zero antes de capturar, pra garantir que nenhum tooltip de um toque
+  // redesenha os gráficos do zero antes de capturar, para garantir que nenhum tooltip de um toque
   // anterior fique "grudado" na imagem exportada — e espera a animação padrão terminar
   renderMensal();
   await new Promise(r=>setTimeout(r, 1300));
@@ -3358,7 +3363,7 @@ async function exportarPDF(){
 
     for(let r=1; r<linhas.length; r++){
       // quebra o texto de cada célula na largura da coluna, e usa a maior quantidade de linhas
-      // pra definir a altura real dessa linha da tabela — evita texto longo ficando cortado
+      // para definir a altura real dessa linha da tabela — evita texto longo ficando cortado
       const linhasPorCelula = linhas[r].map((c,i)=> linhasTexto(c, colWidths[i]));
       const maxLinhasTexto = Math.max(...linhasPorCelula.map(l=>l.length), 1);
       const alturaLinha = Math.max(rowHMin, maxLinhasTexto*11 + 9);
@@ -3618,7 +3623,7 @@ function _falar(texto){
     u.onend = finalizar;
     u.onerror = finalizar;
     // salvaguarda: se o navegador nunca disparar onend/onerror (acontece em alguns Android),
-    // não deixa o fluxo travado esperando pra sempre
+    // não deixa o fluxo travado esperando para sempre
     setTimeout(finalizar, Math.max(4500, texto.length*100));
     speechSynthesis.speak(u);
   });
@@ -3632,7 +3637,7 @@ function _ouvir(){
       try{ _reconhecimentoAtivo.abort(); }catch(e){}
       _reconhecimentoAtivo = null;
     }
-    // pausa curta pra evitar que o microfone abra em cima da fala anterior ainda "assentando"
+    // pausa curta para evitar que o microfone abra em cima da fala anterior ainda "assentando"
     await new Promise(r=>setTimeout(r, 400));
     const rec = new SR();
     _reconhecimentoAtivo = rec;
@@ -3696,7 +3701,7 @@ async function iniciarPreenchimentoPorVoz(){
 
   try{
     btn.textContent = '🎙️ Ouvindo: glicemia...';
-    await _falar('Qual o valor da glicemia? Você pode dizer "cancelar" a qualquer momento pra interromper.');
+    await _falar('Qual o valor da glicemia? Você pode dizer "cancelar" a qualquer momento para interromper.');
     function _glicemiaValida(texto){
       const n = _extrairNumero(texto);
       if(n===null) return null;
