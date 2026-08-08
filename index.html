@@ -8,6 +8,11 @@
 if (sessionStorage.getItem('pitoco_auth') === '1') {
   document.documentElement.classList.add('pitoco-logado');
 }
+// marca cedo se é iPhone, pro CSS já esconder a dica "toque para ampliar" nos gráficos —
+// o zoom fica desativado nesse aparelho (ver toggleChartExpandido no script principal).
+if (/iPhone/.test(navigator.userAgent)) {
+  document.documentElement.classList.add('pitoco-iphone');
+}
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -183,6 +188,10 @@ tr.alvo td.g{color:var(--target);font-weight:600;}
 }
 .chart-expandivel::after{content:"🔍 toque para ampliar";position:absolute;right:8px;bottom:4px;font-size:10px;color:var(--muted);pointer-events:none;}
 .chart-expandivel.expandido::after{content:"🔍 toque 2x para fechar";right:16px;bottom:16px;}
+/* iPhone: zoom desativado (sem trava de orientação no Safari, o recurso perde utilidade) —
+   some a dica visual e o cursor de "lupa", já que tocar no gráfico não faz nada ali. */
+html.pitoco-iphone .chart-expandivel{cursor:default;}
+html.pitoco-iphone .chart-expandivel::after{content:none;}
 .chart-overlay-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;}
 .chart-overlay-backdrop.ativo{display:block;}
 .chart-wrap canvas{max-height:100%;}
@@ -984,7 +993,12 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.8"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.9"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.9: zoom dos gráficos desativado no iPhone (detectado via navigator.userAgent). Sem
+// trava de orientação no Safari iOS, o recurso perdia utilidade e ainda dava comportamento
+// inconsistente. toggleChartExpandido() agora não faz nada ali, e a dica visual "toque para
+// ampliar"/cursor de lupa somem via CSS (classe pitoco-iphone, adicionada cedo no <head> pra
+// já vir certo desde o primeiro paint). Android e desktop continuam com o zoom normal.
 // Rev008.8: adicionadas as tags específicas do iOS que faltavam (apple-mobile-web-app-capable,
 // apple-mobile-web-app-status-bar-style, apple-mobile-web-app-title) — sem elas, "Adicionar à
 // Tela de Início" no iPhone abria uma aba comum do Safari, não um app instalado de verdade
@@ -2038,7 +2052,9 @@ document.addEventListener('fullscreenchange', ()=>{
     _fecharZoomComRecarga();
   }
 });
+const _ehIphone = /iPhone/.test(navigator.userAgent); // zoom dos gráficos desativado nele — sem trava de orientação no Safari iOS, o recurso perde a utilidade e ainda causa comportamento inconsistente
 function toggleChartExpandido(wrapEl, chartInstance, evt, rerenderFn){
+  if(_ehIphone) return; // sem efeito nenhum no iPhone — o gráfico segue no tamanho normal
   const jaExpandido = wrapEl.classList.contains('expandido');
   if(jaExpandido){
     if(!evt || evt.detail < 2) return; // enquanto expandido, só fecha com DUPLO clique no mesmo lugar
