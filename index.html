@@ -602,7 +602,7 @@ if ('serviceWorker' in navigator) {
       <div class="field"><label>Confirmar nova senha</label><input type="password" id="senha-nova-confirma"></div>
       <button class="btn" onclick="alterarSenha()">Salvar nova senha</button>
     </div>
-    <div class="card">
+    <div class="card" id="card-senha-vet">
       <h2>Senha de acesso para o profissional de saúde</h2>
       <div class="notice">Opcional. Dá acesso ao app inteiro (igual ao acesso do tutor), sem precisar compartilhar a senha principal — a única diferença é um aviso "👁️ Acesso profissional de saúde" que aparece no cabeçalho, para identificar que foi essa senha que foi usada.</div>
       <div class="field"><label>Senha atual (a mesma da entrada normal)</label><input type="password" id="senha-atual-vet"></div>
@@ -993,7 +993,12 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.9"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.0: campo "Senha de acesso para o profissional de saúde" (em Configurações) agora só
+// aparece pra profissional de saúde e Engenharia — o tutor não vê mais esse card. Dupla trava,
+// igual já fazíamos com a aba Correção: além de esconder o card via aplicarModoAcesso(),
+// alterarSenhaVet() também checa modoAcesso direto na função, recusando a ação mesmo que
+// alguém tente chamar por fora da UI.
 // Rev008.9: zoom dos gráficos desativado no iPhone (detectado via navigator.userAgent). Sem
 // trava de orientação no Safari iOS, o recurso perdia utilidade e ainda dava comportamento
 // inconsistente. toggleChartExpandido() agora não faz nada ali, e a dica visual "toque para
@@ -1673,6 +1678,9 @@ function aplicarModoAcesso(){
   // configuração dos dias da medição de acompanhamento — mesma regra
   const cardDiasGlicemicos = document.getElementById('card-dias-glicemicos');
   if(cardDiasGlicemicos) cardDiasGlicemicos.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
+  // senha de acesso do profissional de saúde: o tutor não vê nem edita mais essa senha
+  const cardSenhaVet = document.getElementById('card-senha-vet');
+  if(cardSenhaVet) cardSenhaVet.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
 }
 function initApp(){
   const now = new Date();
@@ -1837,6 +1845,7 @@ async function alterarSenha(){
   }).catch(async err=> await customAlert('Erro ao salvar a nova senha: '+err.message));
 }
 async function alterarSenhaVet(){
+  if(modoAcesso !== 'veterinaria' && modoAcesso !== 'engenharia'){ await customAlert('Só o profissional de saúde ou a Engenharia podem alterar essa senha.'); return; }
   const atual = document.getElementById('senha-atual-vet').value;
   const nova = document.getElementById('senha-vet-nova').value;
   if(atual !== senhaAcesso){ await customAlert('Senha atual incorreta. Nada foi alterado.'); return; }
