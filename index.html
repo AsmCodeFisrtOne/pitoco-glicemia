@@ -302,6 +302,7 @@ if ('serviceWorker' in navigator) {
     <button data-tab="semanal">Relatório semanal</button>
     <button data-tab="mensal">Relatório mensal</button>
     <button data-tab="ficha">Ficha do <span class="nome-pet-dinamico">Pitoco</span></button>
+    <button data-tab="agenda">📅 Agenda</button>
     <button data-tab="config">Configurações</button>
     <button data-tab="exames">Exames</button>
     <button data-tab="manual">Manual</button>
@@ -624,6 +625,15 @@ if ('serviceWorker' in navigator) {
       </div>
       <button class="btn" onclick="salvarProtocoloHipo()">Salvar protocolo</button>
     </div>
+    <div class="card" id="card-dias-glicemicos" style="border:2px solid var(--accent-tint2, #c9a227);display:none">
+      <h2>📊 Dias do agendamento glicêmico <span style="font-size:11px;font-weight:600;color:#8a5c14">(profissional de saúde / Engenharia)</span></h2>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">
+        Marque em quais dias da semana o app deve pedir a medição de acompanhamento, 6h após a 1ª insulina daquele
+        dia. Pode marcar mais de um dia. Esses dias também aparecem sinalizados (📊, sem horário) na aba Agenda.
+      </p>
+      <div id="cfg-dias-glicemicos-checks" style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0"></div>
+      <button class="btn" onclick="salvarDiasGlicemicos()">Salvar dias</button>
+    </div>
     <div class="card" id="card-debug-lembrete" style="border:2px dashed #999;display:none">
       <h2>🧪 Modo debug — Lembrete semanal de medição <span style="font-size:11px;font-weight:600;color:#8a5c14">(acesso de Engenharia)</span></h2>
       <p style="font-size:13px;color:var(--muted);margin-top:0">
@@ -822,6 +832,42 @@ if ('serviceWorker' in navigator) {
     </div>
   </section>
 
+  <!-- ---------- AGENDA (compromissos semanais + sinalização do agendamento glicêmico) ---------- -->
+  <section class="panel" id="tab-agenda">
+    <div class="card">
+      <h2>📅 Agenda semanal</h2>
+      <div class="notice">Compromissos que se repetem toda semana (ex: caminhada, fisioterapia). Qualquer acesso pode adicionar ou remover. O selo 📊 marca os dias com agendamento glicêmico (a hora exata varia — veja a configuração em Configurações, disponível pra profissional de saúde/Engenharia).</div>
+      <div class="two-col" style="margin:12px 0">
+        <div class="field">
+          <label>Dia da semana</label>
+          <select id="in-agenda-dia">
+            <option value="0">Domingo</option>
+            <option value="1" selected>Segunda-feira</option>
+            <option value="2">Terça-feira</option>
+            <option value="3">Quarta-feira</option>
+            <option value="4">Quinta-feira</option>
+            <option value="5">Sexta-feira</option>
+            <option value="6">Sábado</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Descrição</label>
+          <input type="text" id="in-agenda-titulo" placeholder="Ex: Caminhar">
+        </div>
+        <div class="field">
+          <label>Início</label>
+          <input type="time" id="in-agenda-hora-inicio">
+        </div>
+        <div class="field">
+          <label>Fim (opcional)</label>
+          <input type="time" id="in-agenda-hora-fim">
+        </div>
+      </div>
+      <button class="btn" onclick="adicionarAgendaItem()">Adicionar à agenda</button>
+    </div>
+    <div id="agenda-lista"></div>
+  </section>
+
   <!-- ---------- NOSSA HISTÓRIA (acesso: todos) ---------- -->
   <section class="panel" id="tab-historia">
     <div class="card">
@@ -858,7 +904,7 @@ if ('serviceWorker' in navigator) {
       </div>
 
       <div style="border:1.5px dashed var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;color:var(--muted);text-align:center">
-        Em breve, um espaço para tutores como você contarem suas próprias histórias de cuidado 🐾
+        Tem uma história parecida com a nossa? Adoraríamos ouvir. Escreva pra <a href="mailto:pitoco.fsb2013@gmail.com?subject=Minha%20hist%C3%B3ria%20de%20cuidado" style="color:var(--primary-dark);font-weight:600">pitoco.fsb2013@gmail.com</a> — algumas histórias podem ser compartilhadas aqui no app (com seu nome ou anônimas, como você preferir).
       </div>
     </div>
   </section>
@@ -882,7 +928,27 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev007.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev007.8"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev007.8: nova aba "📅 Agenda", visível pra todos os acessos. (1) Compromissos semanais
+// recorrentes (dia + hora início/fim opcional + descrição), coleção Firestore 'agenda',
+// qualquer acesso pode adicionar/excluir. (2) Dias com agendamento glicêmico aparecem com um
+// selo 📊 no cabeçalho do dia, SEM mostrar horário (o gatilho real continua sendo 6h após a
+// insulina, evento, não hora fixa). (3) O lembrete de medição pós-insulina, antes travado em
+// "sempre segunda", agora aceita MÚLTIPLOS dias da semana configuráveis — nova config em
+// Configurações → "📊 Dias do agendamento glicêmico" (profissional de saúde/Engenharia),
+// substitui config/lembreteCurva.proximaData sozinho por diasSemana (array) + proximaData.
+// Toda a engine (_proximoDiaGlicemicoAPartirDe, _carregarLembreteState) foi generalizada
+// mantendo compatibilidade — instalações antigas sem diasSemana salvo continuam assumindo
+// [1] (segunda), preservando o comportamento anterior.
+// Rev007.7: notificação real do sistema (Notification API + Service Worker showNotification)
+// pro lembrete semanal de medição pós-insulina — dispara junto com o banner, só na transição
+// de escondido pra visível (não a cada re-checagem de 5 em 5 min). Pede permissão de
+// notificação uma vez, no login (_pedirPermissaoNotificacao). Isso é "Tipo 1": só funciona
+// com o app aberto/recente, é 100% API do navegador, SEM Firebase Cloud Messaging e SEM
+// Cloud Functions — não exige o plano Blaze.
+// Rev007.6: e-mail de contato (pitoco.fsb2013@gmail.com) adicionado no bloco "Compartilhe sua
+// história" da aba Nossa História, como link mailto: já com assunto preenchido. Inclui aviso
+// de que histórias enviadas podem ser compartilhadas no app (com nome ou anônimas).
 // Rev007.5: (1) foto da aba "Nossa História" trocada de banner largo (cortado via
 // object-fit:cover, que no desktop ficava gigante e cortado) pra um formato pequeno tipo
 // foto 3x4 de documento — 150px de largura, centralizada, mostrando a imagem INTEIRA sem
@@ -1484,6 +1550,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab==='curva') renderCurvaTab();
     if(btn.dataset.tab==='exames') renderExamesTab();
     if(btn.dataset.tab==='mensagens') _msgMarcarComoVistas();
+    if(btn.dataset.tab==='agenda') renderAgenda();
   });
 });
 
@@ -1513,13 +1580,17 @@ function aplicarModoAcesso(){
   // campo de protocolo personalizado de hipoglicemia — mesma regra de acesso da aba Correção
   const cardProtocoloHipo = document.getElementById('card-protocolo-hipo');
   if(cardProtocoloHipo) cardProtocoloHipo.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
+  // configuração dos dias do agendamento glicêmico — mesma regra
+  const cardDiasGlicemicos = document.getElementById('card-dias-glicemicos');
+  if(cardDiasGlicemicos) cardDiasGlicemicos.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
 }
 function initApp(){
   const now = new Date();
   document.getElementById('in-data-glicemia').value = toLocalInput(now);
   aplicarModoAcesso();
   renderProtocoloHipo(); // renderiza o padrão de cara; troca pro personalizado se/quando carregar do Firestore
-  _carregarLembreteState().then(()=> verificarLembreteMedicao());
+  _pedirPermissaoNotificacao();
+  _carregarLembreteState().then(()=> { verificarLembreteMedicao(); renderCheckboxesDiasGlicemicos(); renderAgenda(); });
   setInterval(()=> verificarLembreteMedicao(), 5*60000); // reavalia a cada 5 minutos (abertura/fechamento da janela)
 
   db.collection('config').doc('protocoloHipo').get().then(doc=>{
@@ -1532,6 +1603,11 @@ function initApp(){
     mensagens = snap.docs.map(d=>({id:d.id, ...d.data()}));
     renderMensagens();
     atualizarBadgeMensagens();
+  });
+
+  db.collection('agenda').onSnapshot(snap=>{
+    agendaItens = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderAgenda();
   });
 
   db.collection('config').doc('parametros').get().then(doc=>{
@@ -2042,32 +2118,105 @@ function mostrarResultadoCurva(id){
   });
 }
 
-/* ---------------- HELPERS ---------------- */
-/* ---------------- LEMBRETE SEMANAL DE MEDIÇÃO PÓS-INSULINA ---------------- */
-// Toda segunda-feira, depois da 1ª insulina do dia, pede uma medição 6h depois (janela de 1h pra fazer).
-// Se perder a janela, tenta de novo no dia seguinte, até conseguir — aí só lembra de novo na semana que vem.
-window._lembreteState = { proximaData: null };
+/* ---------------- LEMBRETE DE MEDIÇÃO PÓS-INSULINA (dias configuráveis) ---------------- */
+// Nos dias da semana configurados pela veterinária (config/lembreteCurva.diasSemana, ex: [1,4]
+// = segunda e quinta), depois da 1ª insulina do dia, pede uma medição 6h depois (janela de 1h).
+// Se perder a janela, tenta de novo no dia seguinte (mesmo que não seja um dia configurado, pra
+// não deixar passar em branco), até conseguir — aí só lembra de novo no próximo dia configurado.
+window._lembreteState = { proximaData: null, diasSemana: [1] }; // [1] = segunda, valor padrão (comportamento antigo)
 const _lembreteState = window._lembreteState;
 function _dataYMD(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
-function _proximaSegundaAPartirDe(d){
-  const dia = d.getDay(); // 0=domingo...6=sábado, 1=segunda
-  const diff = dia===1 ? 0 : (8-dia)%7;
-  const alvo = new Date(d); alvo.setDate(d.getDate()+diff); alvo.setHours(0,0,0,0);
-  return _dataYMD(alvo);
+const DIAS_SEMANA_NOMES = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+const DIAS_SEMANA_ABREV = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function _proximoDiaGlicemicoAPartirDe(d, diasSemana){
+  const dias = (diasSemana && diasSemana.length) ? diasSemana : [1]; // nunca fica sem nenhum dia configurado
+  for(let i=0; i<7; i++){
+    const alvo = new Date(d); alvo.setDate(d.getDate()+i); alvo.setHours(0,0,0,0);
+    if(dias.includes(alvo.getDay())) return _dataYMD(alvo);
+  }
+  return _dataYMD(d); // nunca deveria chegar aqui, mas evita travar
 }
 async function _carregarLembreteState(){
   const doc = await db.collection('config').doc('lembreteCurva').get();
-  if(doc.exists && doc.data().proximaData){
-    _lembreteState.proximaData = doc.data().proximaData;
+  const dados = doc.exists ? doc.data() : {};
+  _lembreteState.diasSemana = (dados.diasSemana && dados.diasSemana.length) ? dados.diasSemana : [1];
+  if(dados.proximaData){
+    _lembreteState.proximaData = dados.proximaData;
   } else {
-    _lembreteState.proximaData = _proximaSegundaAPartirDe(new Date());
-    await db.collection('config').doc('lembreteCurva').set({proximaData: _lembreteState.proximaData}, {merge:true});
+    _lembreteState.proximaData = _proximoDiaGlicemicoAPartirDe(new Date(), _lembreteState.diasSemana);
+    await db.collection('config').doc('lembreteCurva').set({proximaData: _lembreteState.proximaData, diasSemana: _lembreteState.diasSemana}, {merge:true});
   }
 }
 async function _salvarProximaData(novaData){
   _lembreteState.proximaData = novaData;
   await db.collection('config').doc('lembreteCurva').set({proximaData: novaData}, {merge:true}).catch(()=>{});
 }
+function renderCheckboxesDiasGlicemicos(){
+  const container = document.getElementById('cfg-dias-glicemicos-checks');
+  if(!container) return;
+  container.innerHTML = DIAS_SEMANA_NOMES.map((nome, i)=>{
+    const marcado = _lembreteState.diasSemana.includes(i);
+    return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;background:var(--surface-2);padding:6px 10px;border-radius:8px;cursor:pointer">
+      <input type="checkbox" value="${i}" ${marcado?'checked':''} style="margin:0">${nome}
+    </label>`;
+  }).join('');
+}
+async function salvarDiasGlicemicos(){
+  const marcados = Array.from(document.querySelectorAll('#cfg-dias-glicemicos-checks input:checked')).map(el=>parseInt(el.value,10));
+  if(!marcados.length){
+    await customAlert('Marque pelo menos um dia da semana.');
+    return;
+  }
+  _lembreteState.diasSemana = marcados;
+  await db.collection('config').doc('lembreteCurva').set({diasSemana: marcados}, {merge:true});
+  // se a próxima data agendada não corresponde mais a um dia configurado, recalcula
+  const proxima = new Date(_lembreteState.proximaData+'T00:00:00');
+  if(!marcados.includes(proxima.getDay())){
+    await _salvarProximaData(_proximoDiaGlicemicoAPartirDe(new Date(), marcados));
+  }
+  renderAgenda();
+  await customAlert('Dias do agendamento glicêmico salvos.');
+}
+
+/* ---------------- AGENDA (compromissos semanais recorrentes) ---------------- */
+let agendaItens = [];
+function renderAgenda(){
+  const container = document.getElementById('agenda-lista');
+  if(!container) return;
+  const diasGlicemicos = (_lembreteState && _lembreteState.diasSemana) ? _lembreteState.diasSemana : [];
+  container.innerHTML = DIAS_SEMANA_NOMES.map((nome, i)=>{
+    const itensDoDia = agendaItens.filter(a=>a.diaSemana===i).sort((a,b)=> (a.horaInicio||'').localeCompare(b.horaInicio||''));
+    const temGlicemico = diasGlicemicos.includes(i);
+    const linhasItens = itensDoDia.map(a=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line)">
+          <span style="font-size:13.5px"><b class="mono">${a.horaInicio||''}${a.horaFim?(' – '+a.horaFim):''}</b> — ${(a.titulo||'').replace(/</g,'&lt;')}</span>
+          <button onclick="excluirAgendaItem('${a.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;opacity:.6" title="Excluir">🗑</button>
+        </div>`).join('');
+    return `
+      <div class="card" style="margin-bottom:10px;padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <h3 style="margin:0;font-size:14.5px">${nome}</h3>
+          ${temGlicemico ? '<span title="Agendamento glicêmico" style="font-size:13px">📊</span>' : ''}
+        </div>
+        ${itensDoDia.length ? linhasItens : '<div style="font-size:12.5px;color:var(--muted);padding-top:6px">Nenhum compromisso.</div>'}
+      </div>`;
+  }).join('');
+}
+async function adicionarAgendaItem(){
+  const diaSemana = parseInt(document.getElementById('in-agenda-dia').value, 10);
+  const horaInicio = document.getElementById('in-agenda-hora-inicio').value;
+  const horaFim = document.getElementById('in-agenda-hora-fim').value;
+  const titulo = document.getElementById('in-agenda-titulo').value.trim();
+  if(!titulo){ await customAlert('Descreva o compromisso (ex: Caminhar).'); return; }
+  if(!horaInicio){ await customAlert('Escolha um horário de início.'); return; }
+  await db.collection('agenda').add({diaSemana, horaInicio, horaFim: horaFim||null, titulo, criadoPor: modoAcesso, createdAt: new Date().toISOString()});
+  document.getElementById('in-agenda-titulo').value = '';
+}
+async function excluirAgendaItem(id){
+  if(!(await customConfirm('Excluir este compromisso da agenda?'))) return;
+  db.collection('agenda').doc(id).delete();
+}
+
 function verificarLembreteMedicao(agora = new Date()){
   if(!_lembreteState.proximaData) return; // ainda carregando o estado
   const hojeStr = _dataYMD(agora);
@@ -2088,7 +2237,7 @@ function verificarLembreteMedicao(agora = new Date()){
     _esconderBannerLembrete();
     if(hojeStr === _lembreteState.proximaData){ // só avança se ainda não tinha avançado
       const proxSemana = new Date(agora); proxSemana.setDate(agora.getDate()+7);
-      _salvarProximaData(_proximaSegundaAPartirDe(proxSemana));
+      _salvarProximaData(_proximoDiaGlicemicoAPartirDe(proxSemana, _lembreteState.diasSemana));
     }
     return;
   }
@@ -2109,6 +2258,7 @@ function verificarLembreteMedicao(agora = new Date()){
 }
 function _mostrarBannerLembrete(fimJanela, agora = new Date()){
   let banner = document.getElementById('banner-lembrete-medicao');
+  const jaExistia = !!banner;
   if(!banner){
     banner = document.createElement('div');
     banner.id = 'banner-lembrete-medicao';
@@ -2118,10 +2268,42 @@ function _mostrarBannerLembrete(fimJanela, agora = new Date()){
   const minutosRestantes = Math.max(0, Math.round((fimJanela.getTime()-agora.getTime())/60000));
   banner.innerHTML = `<span>🔔 Hora da medição semanal de acompanhamento — 6h após a 1ª insulina de hoje (janela fecha em ~${minutosRestantes} min)</span>
     <button class="btn" style="padding:6px 12px;font-size:12.5px" onclick="document.querySelector('[data-tab=&quot;lancar&quot;]').click()">Lançar agora</button>`;
+  if(!jaExistia){
+    // dispara só na TRANSIÇÃO de escondido -> visível, não a cada re-checagem de 5 em 5 min
+    _notificarSistema('🔔 Hora da medição semanal', `São 6h após a insulina de hoje — a janela fecha em ~${minutosRestantes} min.`, 'lembrete-medicao-semanal');
+  }
 }
 function _esconderBannerLembrete(){
   const banner = document.getElementById('banner-lembrete-medicao');
   if(banner) banner.remove();
+}
+
+/* ---------------- NOTIFICAÇÕES DO SISTEMA (Tipo 1: só com o app aberto/recente) ----------------
+   API pura do navegador (Notification + Service Worker), sem Firebase Cloud Messaging e sem
+   Cloud Functions — não exige o plano Blaze nem depende de servidor nenhum nosso. Só funciona
+   enquanto o app está aberto ou foi usado recentemente (fica limitado pelo próprio sistema
+   operacional do aparelho da pessoa depois de muito tempo fechado). */
+function _pedirPermissaoNotificacao(){
+  if(!('Notification' in window)) return; // navegador sem suporte — segue sem notificação, sem quebrar nada
+  if(Notification.permission === 'default'){
+    Notification.requestPermission().catch(()=>{});
+  }
+}
+function _notificarSistema(titulo, corpo, tag){
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.ready.then(reg=>{
+      reg.showNotification(titulo, {
+        body: corpo,
+        icon: 'icon-192x192.png',
+        badge: 'icon-96x96.png',
+        tag: tag || 'pitoco-notificacao',
+        renotify: true
+      });
+    }).catch(()=>{});
+  } else {
+    try{ new Notification(titulo, {body: corpo}); }catch(e){}
+  }
 }
 
 /* ---------------- DEBUG: SIMULAÇÃO DO LEMBRETE SEMANAL (Rev004.8) ----------------
