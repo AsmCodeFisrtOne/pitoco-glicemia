@@ -939,7 +939,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.3"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.3: fechar o zoom de um gráfico agora RECARREGA A PÁGINA de verdade (em vez de só
+// recriar o gráfico) — resolve a faixa branca "grudada" na tela que aparecia no Relatório
+// mensal ao sair do zoom (bug de repaint do Chrome Android ao sair de tela cheia; reload
+// forçava correção manual mesmo, então automatizamos isso). Guarda a aba ativa em
+// sessionStorage (pitoco_ultima_aba) antes de recarregar e reabre nela automaticamente depois
+// (_restaurarUltimaAba), pra não voltar sempre pra "Lançar". Vale tanto pro fechamento manual
+// (2º duplo toque / clicar fora) quanto pro fechamento pelo gesto do sistema (fullscreenchange).
 // Rev008.2: MUDANÇA DE ARQUITETURA na orientação da tela. Removido todo o sistema de travar
 // paisagem no login (fullscreen + orientation.lock ao entrar) e o monitoramento que deslogava
 // automaticamente ao sair da paisagem (Rev006.9-007.0) — o app inteiro volta a funcionar
@@ -1479,6 +1486,16 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   window.addEventListener('DOMContentLoaded', initApp);
+  window.addEventListener('DOMContentLoaded', _restaurarUltimaAba);
+}
+// depois de recarregar (ex: ao fechar o zoom de um gráfico), reabre na mesma aba de antes,
+// em vez de voltar sempre pra "Lançar".
+function _restaurarUltimaAba(){
+  const aba = sessionStorage.getItem('pitoco_ultima_aba');
+  if(!aba) return;
+  sessionStorage.removeItem('pitoco_ultima_aba');
+  const btn = document.querySelector(`nav.tabs button[data-tab="${aba}"]`);
+  if(btn) setTimeout(()=> btn.click(), 50);
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 document.getElementById('gate-version').textContent = APP_VERSION;
@@ -1875,11 +1892,13 @@ function fecharApp(){
   }, 300);
 }
 
-/* ---------------- GRÁFICO EXPANDIDO: overlay simples (sem Fullscreen API) ----------------
-   Tentativa anterior usava a Fullscreen API + travar orientação em paisagem, mas isso
-   bagunçava o tamanho da tela em vários aparelhos — revertido. Agora é só um overlay CSS
-   position:fixed centralizado (ver .chart-expandivel.expandido), sem mexer em
-   fullscreen/orientação do navegador. */
+/* ---------------- GRÁFICO EXPANDIDO: tela cheia + paisagem só durante o zoom ----------------
+   Ao expandir: pede fullscreen no documentElement + trava paisagem, dentro do próprio clique
+   que abriu (é o gesto real de usuário que o navegador exige). Ao fechar: sai do fullscreen,
+   destrava a orientação, e RECARREGA A PÁGINA — contorna um bug conhecido do Chrome Android
+   onde uma faixa da tela anterior fica "grudada" até o próximo repaint depois de sair da tela
+   cheia. Guarda a aba atual antes de recarregar, pra reabrir no mesmo lugar (ver
+   _fecharZoomComRecarga / _restaurarUltimaAba). */
 let _chartExpandidoAtual = null; // wrapEl atualmente em zoom, se houver — usado pra sincronizar caso a tela cheia seja fechada pelo gesto do sistema
 
 function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderFn){
@@ -1904,34 +1923,30 @@ function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderF
     }
   } else {
     _chartExpandidoAtual = null;
-    _sairFullscreenPaisagem();
+    _fecharZoomComRecarga();
+    return; // a página vai recarregar — não precisa seguir com resize/rerender abaixo
   }
-  void wrapEl.offsetHeight; // força reflow síncrono antes de medir/recriar
-  if(!expandir && rerenderFn){
-    // fechando: recria o gráfico DO ZERO (destrói e cria de novo), igual acontece ao trocar de
-    // aba — é o jeito mais garantido de acertar o tamanho ao voltar. IMPORTANTE: só faz isso ao
-    // FECHAR — chamar isso ao abrir também recriava a aba inteira (renderMensal() reconstrói o
-    // card todo), o que apagava a classe "expandido" recém-aplicada e dava a impressão de abrir
-    // e fechar instantaneamente.
-    setTimeout(()=> rerenderFn(), 60);
-  } else if(chartInstance){
+  void wrapEl.offsetHeight; // força reflow síncrono antes de medir
+  if(chartInstance){
     chartInstance.resize();
     setTimeout(()=> chartInstance.resize(), 150);
   }
 }
+// Fechar o zoom recarrega a página de verdade — é o jeito mais confiável de corrigir uma faixa
+// da tela que às vezes fica "grudada" ao sair da tela cheia no Chrome Android (bug conhecido do
+// navegador, não do app). Guarda a aba atual pra reabrir no mesmo lugar depois do reload.
+function _fecharZoomComRecarga(){
+  const abaAtiva = document.querySelector('nav.tabs button.active');
+  if(abaAtiva) sessionStorage.setItem('pitoco_ultima_aba', abaAtiva.dataset.tab);
+  _sairFullscreenPaisagem();
+  setTimeout(()=> location.reload(), 120);
+}
 // se o usuário sair da tela cheia pelo gesto do próprio sistema (botão voltar, deslizar) enquanto
-// um gráfico está em zoom, fecha o zoom junto — evita ficar com o gráfico "preso" grande sem
-// estar mais em tela cheia de verdade.
+// um gráfico está em zoom, recarrega junto, pelo mesmo motivo acima.
 document.addEventListener('fullscreenchange', ()=>{
   if(!document.fullscreenElement && _chartExpandidoAtual){
-    const el = _chartExpandidoAtual;
     _chartExpandidoAtual = null;
-    el.classList.remove('expandido');
-    const backdrop = document.getElementById('chart-overlay-backdrop');
-    if(backdrop){ backdrop.classList.remove('ativo'); backdrop.onclick = null; }
-    if(screen.orientation && screen.orientation.unlock){
-      try{ screen.orientation.unlock(); }catch(e){}
-    }
+    _fecharZoomComRecarga();
   }
 });
 function toggleChartExpandido(wrapEl, chartInstance, evt, rerenderFn){
