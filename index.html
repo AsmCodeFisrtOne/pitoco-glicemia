@@ -939,7 +939,18 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.1"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.2"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.2: MUDANÇA DE ARQUITETURA na orientação da tela. Removido todo o sistema de travar
+// paisagem no login (fullscreen + orientation.lock ao entrar) e o monitoramento que deslogava
+// automaticamente ao sair da paisagem (Rev006.9-007.0) — o app inteiro volta a funcionar
+// normalmente em retrato. Em vez disso, a tela cheia + trava de paisagem agora só são pedidas
+// no exato momento do duplo toque que expande um gráfico (chart-semanal e chart-mensal-linha),
+// já que esse toque é um gesto real do usuário — o único jeito do navegador permitir isso.
+// Ao fechar o zoom (2º duplo toque, clique fora, ou gesto do sistema pra sair da tela cheia),
+// tudo desfaz: sai do fullscreen, destrava a orientação, volta pro retrato normal. Novo
+// listener de fullscreenchange sincroniza o estado do gráfico se a tela cheia for encerrada
+// pelo próprio sistema enquanto o zoom está aberto. manifest.webmanifest revertido de
+// "display":"fullscreen"/"orientation":"landscape" para "standalone"/"any".
 // Rev008.1: renomeado "agendamento glicêmico" para "medição de acompanhamento" em todo o app
 // (título do card em Configurações, texto de ajuda, notice da Agenda, tooltip do selo 📊,
 // botões de debug, mensagens de alerta). Motivo: o termo "glicêmico" se confundia com a aba
@@ -1422,8 +1433,6 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','completo');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    _entrarFullscreenPaisagem();
-    _iniciarMonitoramentoOrientacao();
     initApp();
   } else if(senhaVet && v === senhaVet){
     modoAcesso = 'veterinaria';
@@ -1431,8 +1440,6 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','veterinaria');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    _entrarFullscreenPaisagem();
-    _iniciarMonitoramentoOrientacao();
     initApp();
   } else if(v === SENHA_ENGENHARIA){
     modoAcesso = 'engenharia';
@@ -1440,32 +1447,18 @@ async function tryLogin(){
     sessionStorage.setItem('pitoco_modo','engenharia');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    _entrarFullscreenPaisagem();
-    _iniciarMonitoramentoOrientacao();
     initApp();
   } else {
     document.getElementById('gate-err').textContent = 'Senha incorreta.';
   }
 }
-/* ---------------- ORIENTAÇÃO: fullscreen (JS) + paisagem ----------------
-   Testado na prática: sem chamar document.requestFullscreen() explicitamente, o lock de
-   orientação não pega de verdade (mesmo com "display":"fullscreen" no manifest) — então essa
-   chamada volta. O aviso nativo do Android ("app em tela cheia, deslize pra sair") é um
-   recurso de segurança do próprio sistema/navegador pra garantir que ninguém fique "preso"
-   em tela cheia sem saber como sair — não tem como desligar isso via código da página; ele
-   normalmente aparece só de relance ao entrar e some sozinho. */
-function _entrarFullscreenPaisagem(){
-  const el = document.documentElement;
-  if(el.requestFullscreen){
-    el.requestFullscreen().then(()=>{
-      if(screen.orientation && screen.orientation.lock){
-        screen.orientation.lock('landscape').catch(()=>{});
-      }
-    }).catch(()=>{});
-  } else if(screen.orientation && screen.orientation.lock){
-    screen.orientation.lock('landscape').catch(()=>{});
-  }
-}
+/* ---------------- ORIENTAÇÃO: só durante o zoom dos gráficos (não mais no app inteiro) ----------------
+   Tentativas anteriores de travar paisagem pro app inteiro no login foram revertidas — davam
+   problema ao trocar de app (o sistema derruba a trava) e exigiam deslogar pra recuperar.
+   Agora a trava só é pedida no exato momento do duplo toque que expande um gráfico (é um toque
+   real do usuário, o que o navegador exige pra permitir fullscreen/travar orientação), e
+   desfeita quando o zoom fecha — o resto do app continua livre, em retrato normal. Ver
+   toggleChartExpandido() mais abaixo. */
 function _sairFullscreenPaisagem(){
   if(screen.orientation && screen.orientation.unlock){
     try{ screen.orientation.unlock(); }catch(e){}
@@ -1474,59 +1467,8 @@ function _sairFullscreenPaisagem(){
     document.exitFullscreen().catch(()=>{});
   }
 }
-_entrarFullscreenPaisagem(); // tentativa early, assim que o script carrega (funciona se já veio de um gesto do usuário, ex: tocar no ícone do app)
-
-/* ---------------- MONITORAMENTO DE ORIENTAÇÃO: desloga se sair da paisagem ----------------
-   O navegador só deixa travar paisagem/fullscreen em resposta a um toque real do usuário —
-   por isso, tentar reconquistar a trava sozinho (sem toque) depois que o sistema a derruba
-   (ex: você troca de app e volta) não funciona de forma confiável. Estratégia adotada: em vez
-   de insistir em travar de novo, o app fica de olho na orientação real da tela; se detectar
-   que não está mais em paisagem enquanto alguém está logado, desloga sozinho — assim ninguém
-   continua usando o app fora do estado esperado sem perceber, e o próximo login (com o toque
-   real de "Entrar") já consegue travar a paisagem de novo direitinho. */
-let _monitoramentoOrientacaoAtivo = false;
-let _timerGracaOrientacao = null;
-function _iniciarMonitoramentoOrientacao(){
-  _monitoramentoOrientacaoAtivo = false;
-  if(_timerGracaOrientacao) clearTimeout(_timerGracaOrientacao);
-  // tolerância antes de começar a checar — a trava pode levar um instante pra "pegar" logo
-  // após o login ou ao retomar o app, e não queremos deslogar por causa desse instante.
-  _timerGracaOrientacao = setTimeout(()=>{ _monitoramentoOrientacaoAtivo = true; }, 2500);
-}
-function _pararMonitoramentoOrientacao(){
-  _monitoramentoOrientacaoAtivo = false;
-  if(_timerGracaOrientacao) clearTimeout(_timerGracaOrientacao);
-}
-function _checarOrientacaoEDeslogar(){
-  if(!_monitoramentoOrientacaoAtivo) return;
-  const appVisivel = document.getElementById('app') && document.getElementById('app').style.display !== 'none';
-  if(!appVisivel) return;
-  const emPaisagem = window.matchMedia('(orientation: landscape)').matches;
-  if(!emPaisagem){
-    _pararMonitoramentoOrientacao();
-    logout();
-  }
-}
-if(window.matchMedia){
-  window.matchMedia('(orientation: landscape)').addEventListener('change', _checarOrientacaoEDeslogar);
-}
-window.addEventListener('resize', _checarOrientacaoEDeslogar);
-
-// o sistema operacional solta a trava de paisagem/fullscreen quando o app vai pro segundo
-// plano (ex: você abre outro app). Ao voltar pro Pitoco: tenta reconquistar a trava (pode não
-// funcionar, sem toque real) e, se realmente não conseguiu, o monitoramento acima desloga.
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible'){
-    const appVisivel = document.getElementById('app') && document.getElementById('app').style.display !== 'none';
-    if(appVisivel){
-      _entrarFullscreenPaisagem();
-      setTimeout(_checarOrientacaoEDeslogar, 600); // dá um tempinho pra tentativa acima "pegar" antes de checar
-    }
-  }
-});
 
 function logout(){
-  _pararMonitoramentoOrientacao();
   _sairFullscreenPaisagem();
   sessionStorage.removeItem('pitoco_auth');
   sessionStorage.removeItem('pitoco_modo');
@@ -1537,8 +1479,6 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   window.addEventListener('DOMContentLoaded', initApp);
-  window.addEventListener('DOMContentLoaded', _entrarFullscreenPaisagem);
-  window.addEventListener('DOMContentLoaded', _iniciarMonitoramentoOrientacao);
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 document.getElementById('gate-version').textContent = APP_VERSION;
@@ -1926,7 +1866,6 @@ function curvaAtiva(){ return curvas.find(c=>!c.finalizada); }
 
 /* ---------------- TELA DE LOGIN: botão Sair (fecha o app/aba) ---------------- */
 function fecharApp(){
-  _pararMonitoramentoOrientacao();
   _sairFullscreenPaisagem();
   window.close();
   // window.close() só funciona se a aba/janela foi aberta por script (ou em alguns PWAs
@@ -1941,12 +1880,31 @@ function fecharApp(){
    bagunçava o tamanho da tela em vários aparelhos — revertido. Agora é só um overlay CSS
    position:fixed centralizado (ver .chart-expandivel.expandido), sem mexer em
    fullscreen/orientação do navegador. */
+let _chartExpandidoAtual = null; // wrapEl atualmente em zoom, se houver — usado pra sincronizar caso a tela cheia seja fechada pelo gesto do sistema
+
 function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderFn){
   wrapEl.classList.toggle('expandido', expandir);
   const backdrop = document.getElementById('chart-overlay-backdrop');
   if(backdrop){
     backdrop.classList.toggle('ativo', expandir);
     backdrop.onclick = expandir ? (()=> _aplicarEstadoChartExpandido(wrapEl, chartInstance, false, rerenderFn)) : null;
+  }
+  if(expandir){
+    _chartExpandidoAtual = wrapEl;
+    // pede tela cheia + paisagem só agora, no mesmo toque que abriu o zoom — é o único jeito do
+    // navegador permitir isso (exige um toque real do usuário). O resto do app continua livre,
+    // em retrato normal — não trava paisagem no login nem no app inteiro. Se falhar (iOS, ou
+    // navegador sem suporte), o gráfico ainda expande normalmente, só não gira a tela sozinho.
+    if(document.documentElement.requestFullscreen){
+      document.documentElement.requestFullscreen().then(()=>{
+        if(screen.orientation && screen.orientation.lock){
+          screen.orientation.lock('landscape').catch(()=>{});
+        }
+      }).catch(()=>{});
+    }
+  } else {
+    _chartExpandidoAtual = null;
+    _sairFullscreenPaisagem();
   }
   void wrapEl.offsetHeight; // força reflow síncrono antes de medir/recriar
   if(!expandir && rerenderFn){
@@ -1961,6 +1919,21 @@ function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderF
     setTimeout(()=> chartInstance.resize(), 150);
   }
 }
+// se o usuário sair da tela cheia pelo gesto do próprio sistema (botão voltar, deslizar) enquanto
+// um gráfico está em zoom, fecha o zoom junto — evita ficar com o gráfico "preso" grande sem
+// estar mais em tela cheia de verdade.
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement && _chartExpandidoAtual){
+    const el = _chartExpandidoAtual;
+    _chartExpandidoAtual = null;
+    el.classList.remove('expandido');
+    const backdrop = document.getElementById('chart-overlay-backdrop');
+    if(backdrop){ backdrop.classList.remove('ativo'); backdrop.onclick = null; }
+    if(screen.orientation && screen.orientation.unlock){
+      try{ screen.orientation.unlock(); }catch(e){}
+    }
+  }
+});
 function toggleChartExpandido(wrapEl, chartInstance, evt, rerenderFn){
   const jaExpandido = wrapEl.classList.contains('expandido');
   if(jaExpandido){
