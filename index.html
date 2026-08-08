@@ -939,7 +939,17 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.3"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.4"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.4: dois bugs corrigidos da Rev008.3. (1) Conteúdo sumindo no Relatório mensal/semanal
+// depois do reload automático (só sobravam os botões de exportar): _restaurarUltimaAba()
+// clicava na aba cedo demais, antes do Firestore entregar os registros pela 1ª vez — o
+// populateMesSelect() não achava mês nenhum ainda, e nada reatualizava depois. Agora espera
+// _registrosPrimeiraCargaFeita (com teto de 5s) antes de clicar. (2) Rotação livre demais
+// depois do reload (a especificação libera qualquer trava de orientação em toda navegação,
+// então o reload da correção anterior soltava a tela): manifest.webmanifest mudou "orientation"
+// de "any" para "portrait" — quando instalado, o Android usa isso como padrão de repouso do
+// app, sem precisar de JS pra manter travado. O zoom dos gráficos continua conseguindo
+// sobrepor pra paisagem temporariamente. Exige reinstalar o app pra pegar o manifest novo.
 // Rev008.3: fechar o zoom de um gráfico agora RECARREGA A PÁGINA de verdade (em vez de só
 // recriar o gráfico) — resolve a faixa branca "grudada" na tela que aparecia no Relatório
 // mensal ao sair do zoom (bug de repaint do Chrome Android ao sair de tela cheia; reload
@@ -1272,6 +1282,7 @@ try{ db.enablePersistence({synchronizeTabs:true}); }catch(e){ console.warn("Pers
 
 const PET_ID = "pitoco";
 let registros = [];
+let _registrosPrimeiraCargaFeita = false; // vira true assim que o Firestore entrega os registros pela 1ª vez nesta sessão
 let configParam = {hipo:100, alvoMin:200, alvoMax:250, hiper:250, intervaloCurvaHoras:1};
 let configPet = {};
 function nomeDoPet(){ return (configPet && configPet.nome && configPet.nome.trim()) || 'Pitoco'; }
@@ -1489,13 +1500,22 @@ if(sessionStorage.getItem('pitoco_auth') === '1'){
   window.addEventListener('DOMContentLoaded', _restaurarUltimaAba);
 }
 // depois de recarregar (ex: ao fechar o zoom de um gráfico), reabre na mesma aba de antes,
-// em vez de voltar sempre pra "Lançar".
+// em vez de voltar sempre pra "Lançar". Espera os registros carregarem de verdade do Firestore
+// antes de clicar — clicar cedo demais fazia a aba Mensal/Semanal renderizar vazia (o
+// populateMesSelect() não achava mês nenhum ainda), e nada atualizava depois.
 function _restaurarUltimaAba(){
   const aba = sessionStorage.getItem('pitoco_ultima_aba');
   if(!aba) return;
   sessionStorage.removeItem('pitoco_ultima_aba');
   const btn = document.querySelector(`nav.tabs button[data-tab="${aba}"]`);
-  if(btn) setTimeout(()=> btn.click(), 50);
+  if(!btn) return;
+  let tentativas = 0;
+  const tentar = ()=>{
+    tentativas++;
+    if(_registrosPrimeiraCargaFeita || tentativas > 50){ btn.click(); } // 50×100ms = 5s de teto, depois clica de qualquer jeito
+    else setTimeout(tentar, 100);
+  };
+  tentar();
 }
 document.getElementById('gate-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 document.getElementById('gate-version').textContent = APP_VERSION;
@@ -1629,6 +1649,7 @@ function initApp(){
   db.collection('registros').orderBy('dataGlicemia','desc').onSnapshot(snap=>{
     registros = snap.docs.map(d=>({id:d.id, ...d.data()}))
       .sort((a,b)=> new Date(b.dataGlicemia) - new Date(a.dataGlicemia) || new Date(b.createdAt||0) - new Date(a.createdAt||0));
+    _registrosPrimeiraCargaFeita = true;
     renderUltimaLeitura();
     renderMonths();
     populateMesSelect();
