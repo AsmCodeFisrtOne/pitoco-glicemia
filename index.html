@@ -623,7 +623,7 @@ if ('serviceWorker' in navigator) {
         Apaga permanentemente todos os lançamentos de glicemia/insulina e todas as curvas glicêmicas salvas.
         A ficha do <span class="nome-pet-dinamico">Pitoco</span> e as configurações não são afetadas. <strong>Não há como desfazer esta ação.</strong>
       </p>
-      <button class="btn danger" onclick="apagarTudoFluxo()">Apagar todos os registros</button>
+      <button class="btn danger" id="btn-apagar-registros" onclick="apagarTudoFluxo()">Apagar todos os registros</button>
       <hr style="border:none;border-top:1px solid var(--line);margin:18px 0">
       <p style="font-size:13px;color:var(--muted);margin-top:0">
         Apaga permanentemente todas as observações da veterinária salvas em todos os meses do Relatório mensal.
@@ -631,6 +631,15 @@ if ('serviceWorker' in navigator) {
       </p>
       <button class="btn danger" onclick="apagarObsVetFluxo()">Apagar todas as observações da veterinária</button>
       <button class="btn danger" onclick="apagarMensagensFluxo()" style="margin-top:8px">Apagar todas as mensagens</button>
+    </div>
+    <div class="card" id="card-descadastrar-vet" style="border:2px solid var(--danger);display:none">
+      <h2 style="color:var(--danger)">🔒 Bloquear acesso do profissional de saúde</h2>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">
+        Desativa a senha do profissional de saúde imediatamente — quem estiver usando essa senha perde o acesso
+        no próximo login. Útil se você trocar de veterinária ou quiser revogar o acesso por qualquer motivo. Não
+        apaga nenhum dado — só a senha. Uma nova pode ser cadastrada depois, a qualquer momento, no card acima.
+      </p>
+      <button class="btn danger" onclick="descadastrarVetFluxo()">Bloquear acesso do profissional de saúde</button>
     </div>
     <div class="card" id="card-protocolo-hipo" style="border:2px solid var(--accent-tint2, #c9a227);display:none">
       <h2>✏️ Protocolo de hipoglicemia <span style="font-size:11px;font-weight:600;color:#8a5c14">(profissional de saúde / Engenharia)</span></h2>
@@ -753,6 +762,7 @@ if ('serviceWorker' in navigator) {
           <tr><td>Login (entrada no app)</td><td class="mono">Senha de acesso (tutor, prof. saúde ou Engenharia)</td></tr>
           <tr><td>Configurações → Zona de perigo → Apagar todos os registros</td><td>1) a <span class="mono">senha de acesso do tutor</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
           <tr><td>Configurações → Zona de perigo → Apagar todas as mensagens</td><td>1) a <span class="mono">senha de acesso do tutor</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
+          <tr><td>Configurações → Bloquear acesso do profissional de saúde</td><td>Confirmação simples — restrito ao tutor e à Engenharia (o profissional de saúde não vê este botão)</td></tr>
           <tr><td>Aba Mensagens → 🗑 excluir (uma mensagem)</td><td>Sem senha — disponível na própria mensagem, para o autor dela ou para o acesso de Engenharia</td></tr>
         </tbody>
       </table>
@@ -993,7 +1003,15 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev009.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.1"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.1: (1) profissional de saúde não pode mais apagar todos os registros de glicemia —
+// o botão some da Zona de Perigo pra esse acesso (só tutor e Engenharia continuam vendo), e
+// apagarTudoFluxo() também recusa a ação por dentro (dupla trava, mesmo padrão de outras
+// áreas restritas). Continua podendo apagar as próprias observações e mensagens. (2) Novo
+// card "🔒 Bloquear acesso do profissional de saúde" em Configurações, visível só pro tutor
+// e Engenharia — desativa a senha da veterinária na hora (útil se o tutor trocar de
+// profissional), sem apagar nenhum dado. Uma nova senha pode ser cadastrada depois, a
+// qualquer momento, no card de cima.
 // Rev009.0: campo "Senha de acesso para o profissional de saúde" (em Configurações) agora só
 // aparece pra profissional de saúde e Engenharia — o tutor não vê mais esse card. Dupla trava,
 // igual já fazíamos com a aba Correção: além de esconder o card via aplicarModoAcesso(),
@@ -1681,6 +1699,15 @@ function aplicarModoAcesso(){
   // senha de acesso do profissional de saúde: o tutor não vê nem edita mais essa senha
   const cardSenhaVet = document.getElementById('card-senha-vet');
   if(cardSenhaVet) cardSenhaVet.style.display = (modoAcesso === 'veterinaria' || modoAcesso === 'engenharia') ? '' : 'none';
+  // apagar todos os registros de glicemia: profissional de saúde NÃO tem mais essa opção —
+  // só tutor e Engenharia. Fica visível pro profissional continuar vendo o resto da Zona de
+  // perigo (apagar observações próprias, mensagens), só esse botão específico some.
+  const btnApagarRegistros = document.getElementById('btn-apagar-registros');
+  if(btnApagarRegistros) btnApagarRegistros.style.display = (modoAcesso === 'veterinaria') ? 'none' : '';
+  // bloquear/descadastrar o profissional de saúde: só tutor e Engenharia — a própria pessoa
+  // com a senha de profissional de saúde não pode se autobloquear por aqui.
+  const cardDescadastrarVet = document.getElementById('card-descadastrar-vet');
+  if(cardDescadastrarVet) cardDescadastrarVet.style.display = (modoAcesso === 'completo' || modoAcesso === 'engenharia') ? '' : 'none';
 }
 function initApp(){
   const now = new Date();
@@ -1858,7 +1885,17 @@ async function alterarSenhaVet(){
     await customAlert(nova ? 'Senha do profissional de saúde salva com sucesso.' : 'Senha do profissional de saúde desativada.', 'Sucesso', '✅');
   }).catch(async err=> await customAlert('Erro ao salvar: '+err.message));
 }
+async function descadastrarVetFluxo(){
+  if(modoAcesso !== 'completo' && modoAcesso !== 'engenharia'){ await customAlert('Só o tutor ou a Engenharia podem bloquear o acesso do profissional de saúde.'); return; }
+  if(!senhaVet){ await customAlert('Não há nenhuma senha de profissional de saúde cadastrada no momento.'); return; }
+  if(!(await customConfirm('Bloquear o acesso do profissional de saúde agora? A senha atual dela deixa de funcionar imediatamente. Você pode cadastrar uma nova senha depois, a qualquer momento, no card acima.'))) return;
+  db.collection('config').doc('acesso').set({senhaVet: null}, {merge:true}).then(async ()=>{
+    senhaVet = null;
+    await customAlert('Acesso do profissional de saúde bloqueado.', 'Concluído', '✅');
+  }).catch(async err=> await customAlert('Erro ao bloquear: '+err.message));
+}
 async function apagarTudoFluxo(){
+  if(modoAcesso === 'veterinaria'){ await customAlert('O acesso de profissional de saúde não pode apagar registros. Fale com o tutor ou a Engenharia.'); return; }
   const senha = await customPrompt('Para apagar TODOS os registros e curvas, digite a senha de acesso:', 'Confirmar exclusão', 'password');
   if(senha === null) return;
   if(senha !== senhaAcesso){
