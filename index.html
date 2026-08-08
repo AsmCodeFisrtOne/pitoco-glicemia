@@ -712,14 +712,35 @@ if ('serviceWorker' in navigator) {
   </section>
 
   <section class="panel" id="tab-manual">
+    <div class="card" style="border:2px solid var(--primary)">
+      <h2>📄 Quer a versão completa?</h2>
+      <p style="font-size:13.5px">Esta aba traz um resumo. O <b>Manual completo em PDF</b> — com capa, sumário e todas as abas detalhadas — está disponível pra baixar no nosso blog:</p>
+      <p><a href="https://asmcodefisrtone.github.io/as-duas-pontas/manual-pitoco.pdf" target="_blank" rel="noopener" class="btn" style="display:inline-block;text-decoration:none">📄 Baixar Manual em PDF</a></p>
+    </div>
+
+    <div class="card">
+      <h2>Tipos de acesso</h2>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">O app tem três senhas diferentes. Visualmente é o mesmo app nos três — o que muda é quais abas e ferramentas aparecem.</p>
+      <table>
+        <thead><tr><th>Recurso</th><th>Tutor</th><th>Prof. saúde</th><th>Engenharia</th></tr></thead>
+        <tbody>
+          <tr><td>Lançar, relatórios, Agenda, Mensagens, Hipoglicemia</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td></tr>
+          <tr><td>Aba ⚠️ Correção</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td></tr>
+          <tr><td>Personalizar protocolo de hipoglicemia</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td></tr>
+          <tr><td>Configurar dias da medição de acompanhamento</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td></tr>
+          <tr><td>Painel de debug / simulações</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--target)">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <div class="card">
       <h2>Senhas exigidas no app</h2>
       <table>
         <thead><tr><th>Onde</th><th>O que exige</th></tr></thead>
         <tbody>
-          <tr><td>Login (entrada no app)</td><td class="mono">Senha de acesso</td></tr>
-          <tr><td>Configurações → Zona de perigo → Apagar todos os registros</td><td>1) a mesma <span class="mono">senha de acesso</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
-          <tr><td>Configurações → Zona de perigo → Apagar todas as mensagens</td><td>1) a mesma <span class="mono">senha de acesso</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
+          <tr><td>Login (entrada no app)</td><td class="mono">Senha de acesso (tutor, prof. saúde ou Engenharia)</td></tr>
+          <tr><td>Configurações → Zona de perigo → Apagar todos os registros</td><td>1) a <span class="mono">senha de acesso do tutor</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
+          <tr><td>Configurações → Zona de perigo → Apagar todas as mensagens</td><td>1) a <span class="mono">senha de acesso do tutor</span> &nbsp;2) digitar <span class="mono">APAGAR</span> (maiúsculas) para confirmar</td></tr>
           <tr><td>Aba Mensagens → 🗑 excluir (uma mensagem)</td><td>Sem senha — disponível na própria mensagem, pro autor dela ou pro acesso de Engenharia</td></tr>
         </tbody>
       </table>
@@ -727,20 +748,31 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="card">
-      <h2>Como usar cada aba</h2>
-      <h3>Lançar</h3>
-      <p style="font-size:13.5px">Registro rápido de uma medição avulsa: glicemia, insulina (dose/tipo escolhidos das listas cadastradas em Configurações), horários e observação. Data/hora vêm pré-preenchidas com o momento atual.</p>
-      <p style="font-size:13.5px">No topo do formulário, dá pra alternar pro modo <strong>"Só observação (sem glicemia)"</strong> — útil quando você quer registrar algo (vômito, letargia, atividade física) sem ter medido a glicemia naquele momento. Esses lançamentos não entram nas médias, gráficos ou contagem de hipo/hiper — aparecem separados, com o ícone 📝, na tabela de Registros e nos relatórios semanal/mensal (seção própria de sinais clínicos e observações avulsas).</p>
-      <h3>Registros</h3>
+      <h2>Guia de cada aba</h2>
+      <h3>🆘 Hipoglicemia <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">Primeira aba, de propósito, pra ser rápida de achar numa emergência. Como reconhecer sinais e o que fazer, sem nunca sugerir dose de insulina. O botão "Registrar este episódio agora" salva o registro automaticamente e leva pra aba Lançar já em edição.</p>
+      <h3>💬 Mensagens <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">Chat único, compartilhado entre tutor, profissional de saúde e Engenharia. O ícone pisca quando chega mensagem nova. Qualquer um exclui a própria mensagem; Engenharia exclui qualquer uma.</p>
+      <h3>Lançar <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">Registro rápido de uma medição: glicemia, insulina (dose/tipo cadastrados em Configurações), horários e observação. No topo, dá pra alternar pro modo <strong>"Só observação (sem glicemia)"</strong> — não entra em médias/gráficos, aparece com 📝 nos Registros.</p>
+      <h3>Registros <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
       <p style="font-size:13.5px">Histórico completo, agrupado por mês, com opção de editar ou excluir cada lançamento.</p>
-      <h3>Curva glicêmica</h3>
-      <p style="font-size:13.5px">Fluxo dedicado para acompanhar a resposta à insulina ao longo de um dia: iniciar → registrar pontos a cada 1-2h → finalizar → ver resultado com nadir medido/estimado e histórico de tendência.</p>
-      <h3>Relatório semanal / mensal</h3>
-      <p style="font-size:13.5px">Estatísticas agregadas para acompanhamento contínuo e para levar à consulta veterinária (o mensal tem exportação em PDF).</p>
-      <h3>Ficha do <span class="nome-pet-dinamico">Pitoco</span></h3>
-      <p style="font-size:13.5px">Dados cadastrais do paciente, com histórico de peso automático.</p>
-      <h3>Configurações</h3>
-      <p style="font-size:13.5px">Faixas de hipo/alvo/hiper, insulinas cadastradas, e a Zona de perigo.</p>
+      <h3>Curva glicêmica <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">Acompanha a resposta à insulina ao longo do dia: iniciar → registrar pontos → finalizar → ver resultado com nadir medido/estimado e tendência.</p>
+      <h3>Relatório semanal / mensal <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">Estatísticas agregadas pra acompanhamento e consulta veterinária. O mensal expande em zoom e exporta em PDF ou planilha.</p>
+      <h3>Ficha do <span class="nome-pet-dinamico">Pitoco</span> <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">Dados cadastrais do paciente, com histórico de peso automático. O nome cadastrado aqui aparece em todo o resto do app.</p>
+      <h3>📅 Agenda <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">Compromissos semanais recorrentes (ex: caminhada). Dias com medição de acompanhamento agendada ganham o selo 📊, sem mostrar horário — o gatilho real é 6h após a insulina do dia, não hora fixa.</p>
+      <h3>Configurações <span style="font-size:11px;color:var(--muted)">(todos veem; alguns blocos são restritos)</span></h3>
+      <p style="font-size:13.5px">Faixas de hipo/alvo/hiper, intervalo sugerido da curva, insulinas cadastradas, senhas e Zona de perigo (todos os acessos). Protocolo de hipoglicemia e dias da medição de acompanhamento (só profissional de saúde/Engenharia). Modo debug (só Engenharia).</p>
+      <h3>Exames <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">Registro de exames laboratoriais e observações da veterinária, separado dos lançamentos diários.</p>
+      <h3>⚠️ Correção <span style="font-size:11px;color:var(--danger)">(restrita — profissional de saúde / Engenharia)</span></h3>
+      <p style="font-size:13.5px">O tutor não vê nem consegue abrir esta aba. Reservada pra uma futura calculadora de correção de insulina — hoje só mostra a explicação do risco de <i>stacking</i> e o que a veterinária precisa definir antes de ativar. Sem cálculo ativo.</p>
+      <h3>❤️ Nossa História <span style="font-size:11px;color:var(--muted)">(todos os acessos)</span></h3>
+      <p style="font-size:13.5px">A dedicatória do app, os créditos, e um convite a doação e compartilhar sua própria história de cuidado.</p>
     </div>
 
     <div class="card">
@@ -949,7 +981,13 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev008.5"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev008.6"; // formato correto: a cada +0.1, ao passar de .9 volta pra .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev008.6: aba Manual (dentro do app) atualizada, mesmo espírito do Manual em PDF — estava
+// bem desatualizada (não mencionava Hipoglicemia, Mensagens, Agenda, Correção, Nossa
+// História, nem os 3 tipos de acesso). Agora tem: link pra baixar o PDF completo (hospedado
+// no blog As Duas Pontas), tabela comparativa dos 3 acessos, e o guia de TODAS as abas
+// (com selo de qual acesso vê cada uma). Glossários de curva/semanal/mensal e a tabela de
+// recursos clínicos foram mantidos como estavam (ainda precisos).
 // Rev008.5: (1) corrigido o "flash" da tela de login aparecendo por um instante a cada reload
 // (ex: ao fechar o zoom de um gráfico) — script inline no <head>, ANTES de qualquer coisa
 // pintar na tela, já adiciona a classe "pitoco-logado" no <html> se a sessão já estava
