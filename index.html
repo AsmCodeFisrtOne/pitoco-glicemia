@@ -1003,7 +1003,18 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev009.1"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.2"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.2: detecção de efeito Somogyi deixou de ser gravada no banco (possivelSomogyi/
+// somogyiRefId) e passou a ser recalculada sempre na hora de exibir, a partir dos dados atuais
+// (_idsComPossivelSomogyi). Corrige um bug real: se a hipoglicemia que causou o alerta fosse
+// depois editada ou apagada, o alerta de rebote ficava "órfão" pra sempre no registro alto,
+// mesmo sem nenhuma hipoglicemia real relacionada. Agora, apagar/editar o registro corrige o
+// alerta automaticamente, sem precisar de nenhuma ação manual. Aplicado em: ícone ⚠️ na tabela
+// de Registros, estatística/lista do Relatório mensal, exportação em PDF e planilha. NOVO: o
+// gráfico "Glicemia ao longo do mês (cada leitura)" agora marca visualmente os pontos de
+// possível rebote com um losango laranja (🔶) em vez do círculo normal, com legenda explicativa
+// abaixo do gráfico quando há pelo menos um caso no mês, e um aviso no tooltip ao passar o
+// mouse/tocar no ponto.
 // Rev009.1: (1) profissional de saúde não pode mais apagar todos os registros de glicemia —
 // o botão some da Zona de Perigo pra esse acesso (só tutor e Engenharia continuam vendo), e
 // apagarTudoFluxo() também recusa a ação por dentro (dupla trava, mesmo padrão de outras
@@ -2743,7 +2754,11 @@ async function salvarRegistro(){
     updatedAt: new Date().toISOString()
   };
 
-  // efeito Somogyi: hipoglicemia seguida de hiperglicemia de rebote em poucas horas
+  // efeito Somogyi: hipoglicemia seguida de hiperglicemia de rebote em poucas horas. NÃO grava
+  // mais isso no registro — só usa pra decidir se mostra o aviso na hora (ver customAlertPerigo
+  // abaixo). A marcação exibida em Registros/Relatório mensal é sempre recalculada na hora de
+  // exibir (ver _idsComPossivelSomogyi), pra nunca ficar desatualizada se algo mudar depois.
+  let _temSomogyiAgora = false;
   if(!ehObs && glicemia > configParam.hiper){
     const janelaMs = 12*60*60*1000;
     const tAtual = new Date(dataGlicemiaISO).getTime();
@@ -2751,10 +2766,7 @@ async function salvarRegistro(){
       const tHipo = new Date(r.dataGlicemia).getTime();
       return r.glicemia < configParam.hipo && tAtual > tHipo && (tAtual - tHipo) <= janelaMs;
     });
-    if(hipoRecente){
-      dado.possivelSomogyi = true;
-      dado.somogyiRefId = hipoRecente.id;
-    }
+    if(hipoRecente) _temSomogyiAgora = true;
   }
 
   try{
@@ -2814,7 +2826,7 @@ async function salvarRegistro(){
     if(!ehObs && glicemia < configParam.hipo){
       await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — abaixo do limite de hipoglicemia (${configParam.hipo} mg/dL).\n\nMonitore o ${nomeDoPet()} de perto. Se houver sinais de fraqueza, tremores ou desorientação, contate a veterinária imediatamente.`, 'HIPOGLICEMIA DETECTADA');
     } else if(!ehObs && glicemia > configParam.hiper){
-      const avisoSomogyi = dado.possivelSomogyi ? '\n\nATENÇÃO: houve uma hipoglicemia nas últimas 12h antes desta leitura — isso pode ser um efeito Somogyi (hiperglicemia de rebote), não necessariamente falta de insulina. Não aumente a dose sem falar com a veterinária.' : '';
+      const avisoSomogyi = _temSomogyiAgora ? '\n\nATENÇÃO: houve uma hipoglicemia nas últimas 12h antes desta leitura — isso pode ser um efeito Somogyi (hiperglicemia de rebote), não necessariamente falta de insulina. Não aumente a dose sem falar com a veterinária.' : '';
       await customAlertPerigo(`Glicemia registrada: ${glicemia} mg/dL — acima do limite de hiperglicemia (${configParam.hiper} mg/dL).\n\nMonitore o ${nomeDoPet()} e considere contatar a veterinária conforme orientação do tratamento.${avisoSomogyi}`, 'HIPERGLICEMIA DETECTADA');
     }
     return true;
@@ -2882,9 +2894,33 @@ async function excluirRegistro(id){
 }
 
 /* ---------------- TABELA POR MÊS ---------------- */
+/* ---------------- EFEITO SOMOGYI: detectado sempre na hora de exibir, nunca salvo no banco ----------------
+   Antes, essa marcação era calculada uma vez (no momento do lançamento) e gravada permanentemente
+   no registro (possivelSomogyi/somogyiRefId). Isso ficava desatualizado se o lançamento de
+   hipoglicemia relacionado fosse depois editado ou apagado — a marcação de rebote continuava lá,
+   órfã, sem nenhuma hipoglicemia real que a justificasse. Agora é recalculado toda vez que é
+   preciso exibir (Registros, Relatório mensal, PDF, planilha, gráfico), direto em cima dos dados
+   atuais — se a hipoglicemia que causou o alerta for removida, o alerta some sozinho, sem precisar
+   apagar nem recalcular nada manualmente. */
+function _idsComPossivelSomogyi(){
+  const janelaMs = 12*60*60*1000;
+  const set = new Set();
+  const comGlicemia = registros.filter(r=>!r.apenasObservacao && r.glicemia!=null);
+  comGlicemia.forEach(r=>{
+    if(r.glicemia <= configParam.hiper) return;
+    const tAtual = new Date(r.dataGlicemia).getTime();
+    const hipoRecente = comGlicemia.find(r2=>{
+      const tHipo = new Date(r2.dataGlicemia).getTime();
+      return r2.glicemia < configParam.hipo && tAtual > tHipo && (tAtual - tHipo) <= janelaMs;
+    });
+    if(hipoRecente) set.add(r.id);
+  });
+  return set;
+}
 function renderMonths(){
   const container = document.getElementById('months-container');
   if(!registros.length){ container.innerHTML = '<div class="empty">Nenhum lançamento ainda.</div>'; return; }
+  const idsSomogyi = _idsComPossivelSomogyi();
   const groups = {};
   registros.forEach(r=>{
     const k = monthKey(r.dataGlicemia);
@@ -2899,7 +2935,7 @@ function renderMonths(){
       const cls = ehObsRow ? '' : classifica(r.glicemia);
       const celulaGlicemia = ehObsRow
         ? `<span class="pill alvo">📝 Observação</span>`
-        : `${r.glicemia}${r.possivelSomogyi?' <span title="Possível efeito Somogyi">⚠️</span>':''}`;
+        : `${r.glicemia}${idsSomogyi.has(r.id)?' <span title="Possível efeito Somogyi">⚠️</span>':''}`;
       const atividadeTxt = r.atividadeFisica ? `<br><span style="color:var(--muted);font-size:11.5px">🏃 Atividade física${r.atividadeFisica.inicio?': '+new Date(r.atividadeFisica.inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}${r.atividadeFisica.fim?' – '+new Date(r.atividadeFisica.fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span>` : '';
       return `<tr class="${cls}">
         <td class="mono">${fmtDate(r.dataGlicemia)}</td>
@@ -3115,18 +3151,25 @@ function renderChartMensalLinha(modo){
       plugins:[_faixaAlvoLabelPlugin]
     });
   } else {
+    const idsSomogyiChart = _idsComPossivelSomogyi();
     const tendencia = calcularTendenciaLinear(lista.map(r=>r.glicemia));
+    const pointCores = lista.map(r=> idsSomogyiChart.has(r.id) ? '#E8A33D' : '#2A6F6F');
+    const pointRaios = lista.map(r=> idsSomogyiChart.has(r.id) ? 7 : 2);
+    const pointFormatos = lista.map(r=> idsSomogyiChart.has(r.id) ? 'rectRot' : 'circle'); // losango pro possível rebote, bolinha normal pro resto
     mensalChart1 = new Chart(ctx1, {
       type:'line',
       data:{ labels: lista.map(r=> new Date(r.dataGlicemia).toLocaleDateString('pt-BR')), datasets:[
         ..._datasetsFaixaAlvo(lista.length),
-        { label:'Glicemia', data: lista.map(r=>r.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.2, pointRadius:2, pointHitRadius:12 },
+        { label:'Glicemia', data: lista.map(r=>r.glicemia), borderColor:'#2A6F6F', backgroundColor:'rgba(42,111,111,0.1)', fill:true, tension:0.2, pointRadius:pointRaios, pointBackgroundColor:pointCores, pointBorderColor:pointCores, pointStyle:pointFormatos, pointHitRadius:12 },
         { label:'Tendência', data: tendencia, borderColor:'#C1533D', borderWidth:2, borderDash:[8,4], pointRadius:0, fill:false, tension:0 }
       ]},
       options:{ responsive:true, maintainAspectRatio:false,
         interaction:{ mode:'index', intersect:false },
         plugins:{legend:{display:true, position:'bottom', labels:{boxWidth:10,font:{size:10}, filter:(item)=>!item.text.startsWith('Alvo')}}, title:{display:true,text:'Glicemia ao longo do mês (cada leitura) + tendência'},
-        tooltip:{ callbacks:{ title: (items)=> new Date(lista[items[0].dataIndex].dataGlicemia).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) }, filter:(item)=> !item.dataset.label.startsWith('Alvo') } },
+        tooltip:{ callbacks:{
+          title: (items)=> new Date(lista[items[0].dataIndex].dataGlicemia).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
+          afterLabel: (item)=> (item.dataset.label === 'Glicemia' && idsSomogyiChart.has((lista[item.dataIndex]||{}).id)) ? '⚠️ Possível efeito Somogyi (rebote)' : undefined
+        }, filter:(item)=> !item.dataset.label.startsWith('Alvo') } },
         scales:{ x:{ ticks:{ autoSkip:true, maxRotation:45, minRotation:0, maxTicksLimit:12 } } } },
       plugins:[_faixaAlvoLabelPlugin]
     });
@@ -3182,8 +3225,10 @@ function renderMensal(){
   const topHipo = ordenado.slice(0,3).filter(r=>r.glicemia<configParam.hipo || r.glicemia<configParam.alvoMin);
   const topHiper = [...ordenado].reverse().slice(0,3).filter(r=>r.glicemia>configParam.hiper || r.glicemia>configParam.alvoMax);
 
-  // efeito Somogyi: reaproveita a marcação já feita no momento do lançamento
-  const episodiosSomogyi = lista.filter(r=>r.possivelSomogyi);
+  // efeito Somogyi: recalculado agora, na hora de exibir (ver _idsComPossivelSomogyi) — não é
+  // mais uma marcação salva no momento do lançamento
+  const idsSomogyiMensal = _idsComPossivelSomogyi();
+  const episodiosSomogyi = lista.filter(r=>idsSomogyiMensal.has(r.id));
 
   if(!s){
     content.innerHTML = `<div class="empty">Sem lançamentos com glicemia neste mês.</div><div id="mensal-obs" style="margin-top:14px"></div>`;
@@ -3222,6 +3267,7 @@ function renderMensal(){
           <button class="btn secondary" id="btn-view-bruto" onclick="setChartView('bruto')" style="font-size:12px;padding:6px 10px">Cada leitura</button>
         </div>
         <div class="chart-wrap chart-expandivel" onclick="toggleChartExpandido(this, mensalChart1, event, ()=>{ populateMesSelect(); renderMensal(); })"><canvas id="chart-mensal-linha" height="200"></canvas></div>
+        ${episodiosSomogyi.length ? `<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:4px">🔶 losango laranja = possível efeito Somogyi (rebote)</div>` : ''}
       </div>
       <div class="chart-wrap"><canvas id="chart-mensal-scatter" height="200"></canvas></div>
     </div>
@@ -3597,6 +3643,7 @@ function exportarPlanilha(){
   const d = window._mensalReportData;
   if(!d){ customAlert('Abra o relatório mensal antes de exportar.'); return; }
   const { key, listaCompleta } = d;
+  const idsSomogyiPlanilha = _idsComPossivelSomogyi();
 
   const cabecalho = ['Data/Hora','Tipo','Glicemia (mg/dL)','Dose Insulina (UI)','Tipo Insulina','Local Aplicação','Sinais Clínicos','Atividade Física - Início','Atividade Física - Fim','Observação','Possível Somogyi'];
   const linhas = listaCompleta.map(r=>[
@@ -3610,7 +3657,7 @@ function exportarPlanilha(){
     r.atividadeFisica&&r.atividadeFisica.inicio ? new Date(r.atividadeFisica.inicio).toLocaleString('pt-BR') : '',
     r.atividadeFisica&&r.atividadeFisica.fim ? new Date(r.atividadeFisica.fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '',
     r.observacao || '',
-    r.possivelSomogyi ? 'Sim' : ''
+    idsSomogyiPlanilha.has(r.id) ? 'Sim' : ''
   ]);
 
   const planilha = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
