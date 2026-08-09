@@ -412,11 +412,17 @@ if ('serviceWorker' in navigator) {
       <h2 style="color:var(--danger)">🆘 Emergência</h2>
     </div>
     <div class="ts-emergencia-card">
-      <button class="btn" style="width:100%;font-size:15.5px;padding:16px 20px;margin-bottom:14px;background:var(--danger)" onclick="tsPularParaCompleto(); registrarEpisodioHipoglicemia();">📝 Registrar este episódio agora</button>
-      <div class="notice" style="border-color:var(--danger)">Hipoglicemia é uma emergência que pode evoluir rápido. Em caso de dúvida, aja primeiro e ligue para a veterinária em seguida.</div>
+      <button class="btn" id="btn-registrar-hipo-simples" style="width:100%;font-size:17px;padding:16px 20px;margin:4px 0 14px;background:var(--danger)" onclick="tsPularParaCompleto(); registrarEpisodioHipoglicemia();">📝 Registrar este episódio agora</button>
+      <div class="notice" style="border-color:var(--danger)">
+        Hipoglicemia (açúcar baixo demais) é uma emergência que pode evoluir rápido. Em caso de dúvida, aja primeiro e
+        ligue para a veterinária em seguida — não espere confirmação para agir.
+      </div>
+
       <h3>1) Reconheça os sinais</h3>
       <p style="font-size:13.5px">Fome intensa, fraqueza, tremores, andar cambaleante, desorientação, ou convulsão.</p>
+
       <div class="hipo-acoes-alvo"></div>
+
       <h3>4) Sempre procure a veterinária se:</h3>
       <ul style="font-size:13.5px;line-height:1.8">
         <li>Houve convulsão;</li>
@@ -424,6 +430,8 @@ if ('serviceWorker' in navigator) {
         <li>Os sinais voltarem depois de melhorar;</li>
         <li>Você não tem certeza do que está vendo — é sempre mais seguro procurar ajuda do que esperar.</li>
       </ul>
+
+      <div class="notice">Este conteúdo é baseado em orientações gerais de fabricantes e diretrizes veterinárias — não substitui uma avaliação clínica. Em qualquer emergência, o passo mais seguro é sempre contatar a veterinária ou um hospital veterinário 24h.</div>
     </div>
   </div>
 </div>
@@ -1154,7 +1162,16 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev009.3"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.4"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.4: (1) tela simples agora MESCLA glicemia + insulina lançadas em sequência (até 20
+// min de diferença) num único registro, em vez de criar dois separados — evita o problema de
+// "insulina virou observação" na tabela. (2) Registros: linha sem glicemia mas COM insulina
+// agora mostra "💉 Só insulina" em vez de "📝 Observação" — antes qualquer registro sem
+// glicemia era rotulado como observação, mesmo tendo dose de insulina real. (3) Vista de
+// Emergência da tela simples corrigida pra ficar IDÊNTICA à aba 🆘 Hipoglicemia — faltava o
+// aviso final de rodapé, e o texto do aviso principal estava resumido/diferente. Confirmado
+// que a personalização do protocolo pela veterinária (protocoloHipoCustom) já aparece
+// automaticamente nas duas telas, já que renderProtocoloHipo() atualiza ambas juntas.
 // Rev009.3: NOVA TELA INICIAL SIMPLIFICADA — só pro acesso do tutor. Ao logar, em vez de cair
 // na interface completa, aparecem 3 botões grandes: 🩸 Registrar Glicemia, 💉 Registrar
 // Insulina, 🆘 Emergência (mesmo conteúdo da aba Hipoglicemia). As calculadoras de Glicemia/
@@ -1652,32 +1669,59 @@ function tsConfirmarPopup(tipo){
 function tsFecharPopup(){
   document.getElementById('ts-popup-fundo').classList.remove('ativo');
 }
+// procura, entre os registros já carregados, o mais recente (dentro de `minutos`) que já tem
+// `campoPresente` preenchido mas ainda não tem `campoFaltando` — usado pra mesclar glicemia +
+// insulina lançadas em sequência na tela simples num único registro, em vez de criar dois.
+function tsAcharRegistroParaMesclar(campoFaltando, campoPresente, minutos=20){
+  const limite = Date.now() - minutos*60000;
+  const candidatos = registros.filter(r=>
+    !r.apenasObservacao &&
+    (r[campoFaltando]===null || r[campoFaltando]===undefined) &&
+    r[campoPresente]!==null && r[campoPresente]!==undefined &&
+    new Date(r.dataGlicemia).getTime() >= limite
+  );
+  if(!candidatos.length) return null;
+  candidatos.sort((a,b)=> new Date(b.dataGlicemia) - new Date(a.dataGlicemia));
+  return candidatos[0];
+}
 async function tsSalvarConfirmado(){
   const btnConfirmar = document.getElementById('ts-popup-confirmar');
   const tipo = btnConfirmar.dataset.tipo;
   const numero = parseFloat(btnConfirmar.dataset.valor);
   const agora = new Date().toISOString();
-  let dado;
-  if(tipo === 'glicemia'){
-    dado = {
-      petId: PET_ID, glicemia: numero, apenasObservacao: false, dataGlicemia: agora,
-      insulinaDose: null, insulinaTipo: null, dataInsulina: null, ultimaRefeicao: null,
-      observacao: null, curvaDia: false, localAplicacao: null, sinaisClinicos: [], atividadeFisica: null,
-      updatedAt: agora
-    };
-  } else {
-    // usa o primeiro tipo de insulina cadastrado em Configurações como padrão — tela simples
-    // não pergunta qual tipo, pra manter o fluxo curto
-    const tipoInsulinaPadrao = (typeof configInsulina !== 'undefined' && configInsulina && configInsulina.tipos && configInsulina.tipos[0]) || null;
-    dado = {
-      petId: PET_ID, glicemia: null, apenasObservacao: false, dataGlicemia: agora,
-      insulinaDose: numero, insulinaTipo: tipoInsulinaPadrao, dataInsulina: agora, ultimaRefeicao: null,
-      observacao: null, curvaDia: false, localAplicacao: null, sinaisClinicos: [], atividadeFisica: null,
-      updatedAt: agora
-    };
-  }
   try{
-    await db.collection('registros').add(dado);
+    if(tipo === 'glicemia'){
+      // se uma insulina foi lançada há pouco (tela simples) sem glicemia ainda, junta os dois
+      // no mesmo registro em vez de criar um novo
+      const existente = tsAcharRegistroParaMesclar('glicemia', 'insulinaDose');
+      if(existente){
+        await db.collection('registros').doc(existente.id).update({ glicemia: numero, updatedAt: agora });
+      } else {
+        await db.collection('registros').add({
+          petId: PET_ID, glicemia: numero, apenasObservacao: false, dataGlicemia: agora,
+          insulinaDose: null, insulinaTipo: null, dataInsulina: null, ultimaRefeicao: null,
+          observacao: null, curvaDia: false, localAplicacao: null, sinaisClinicos: [], atividadeFisica: null,
+          updatedAt: agora
+        });
+      }
+    } else {
+      // usa o primeiro tipo de insulina cadastrado em Configurações como padrão — tela simples
+      // não pergunta qual tipo, pra manter o fluxo curto
+      const tipoInsulinaPadrao = (typeof configInsulina !== 'undefined' && configInsulina && configInsulina.tipos && configInsulina.tipos[0]) || null;
+      // se uma glicemia foi lançada há pouco (tela simples) sem insulina ainda, junta os dois
+      // no mesmo registro em vez de criar um novo
+      const existente = tsAcharRegistroParaMesclar('insulinaDose', 'glicemia');
+      if(existente){
+        await db.collection('registros').doc(existente.id).update({ insulinaDose: numero, insulinaTipo: tipoInsulinaPadrao, dataInsulina: agora, updatedAt: agora });
+      } else {
+        await db.collection('registros').add({
+          petId: PET_ID, glicemia: null, apenasObservacao: false, dataGlicemia: agora,
+          insulinaDose: numero, insulinaTipo: tipoInsulinaPadrao, dataInsulina: agora, ultimaRefeicao: null,
+          observacao: null, curvaDia: false, localAplicacao: null, sinaisClinicos: [], atividadeFisica: null,
+          updatedAt: agora
+        });
+      }
+    }
     tsFecharPopup();
     await customAlert(tipo==='glicemia' ? 'Glicemia registrada com sucesso.' : 'Insulina registrada com sucesso.', 'Salvo', '✅');
     tsAbrirVista('inicio');
@@ -3205,10 +3249,10 @@ function renderMonths(){
     const list = groups[k];
     const vals = list.filter(r=>r.glicemia!==null && r.glicemia!==undefined).map(r=>r.glicemia);
     const rows = list.map(r=>{
-      const ehObsRow = r.glicemia===null || r.glicemia===undefined;
-      const cls = ehObsRow ? '' : classifica(r.glicemia);
-      const celulaGlicemia = ehObsRow
-        ? `<span class="pill alvo">📝 Observação</span>`
+      const semGlicemia = r.glicemia===null || r.glicemia===undefined;
+      const cls = semGlicemia ? '' : classifica(r.glicemia);
+      const celulaGlicemia = semGlicemia
+        ? (r.insulinaDose ? `<span class="pill alvo">💉 Só insulina</span>` : `<span class="pill alvo">📝 Observação</span>`)
         : `${r.glicemia}${idsSomogyi.has(r.id)?' <span title="Possível efeito Somogyi">⚠️</span>':''}`;
       const atividadeTxt = r.atividadeFisica ? `<br><span style="color:var(--muted);font-size:11.5px">🏃 Atividade física${r.atividadeFisica.inicio?': '+new Date(r.atividadeFisica.inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}${r.atividadeFisica.fim?' – '+new Date(r.atividadeFisica.fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span>` : '';
       return `<tr class="${cls}">
