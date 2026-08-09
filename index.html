@@ -87,7 +87,7 @@ html.pitoco-logado #app{display:block;}
 /* ---------- Tela inicial simplificada (só acesso do tutor) ---------- */
 #tela-simples{position:fixed;inset:0;background:var(--bg);z-index:90;display:none;overflow-y:auto;}
 #tela-simples.ativa{display:flex;flex-direction:column;}
-.ts-vista{display:none;flex:1;flex-direction:column;padding:22px 20px;max-width:460px;margin:0 auto;width:100%;box-sizing:border-box;}
+.ts-vista{display:none;flex:1;flex-direction:column;padding:22px 20px;max-width:460px;margin:0 auto;width:100%;box-sizing:border-box;position:relative;}
 .ts-vista.ativa{display:flex;}
 .ts-topo{text-align:center;margin-bottom:8px;}
 .ts-topo .paw{width:52px;height:52px;border-radius:14px;background:var(--primary-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px;object-fit:cover;}
@@ -350,6 +350,7 @@ if ('serviceWorker' in navigator) {
 <div id="tela-simples">
   <!-- ---- VISTA: INÍCIO (3 botões grandes) ---- -->
   <div class="ts-vista ativa" id="ts-inicio">
+    <button style="position:absolute;top:22px;right:20px;background:none;border:1px solid var(--line);color:var(--muted);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer" onclick="logout()">Logoff</button>
     <div class="ts-topo">
       <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🐾</div>
       <h1><span class="nome-pet-dinamico">Pitoco</span></h1>
@@ -1162,7 +1163,15 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev009.4"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.5"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.5: (1) botão "Logoff" adicionado na tela inicial simplificada (faltava — o tutor não
+// tinha como sair sem ir pro sistema completo primeiro). (2) Corrigido: ao dar zoom num
+// gráfico dentro do sistema completo e fechar o zoom (o que recarrega a página, ver Rev008.3),
+// o tutor não volta mais pra tela simplificada — antes isso acontecia porque initApp() sempre
+// mostrava a tela simples de novo pra qualquer acesso "completo", sem saber que a pessoa já
+// tinha escolhido "Pular" pro sistema completo. Agora isso fica marcado em sessionStorage
+// (pitoco_pulou_tela_simples) e sobrevive ao reload; some no Logoff, então um login novo
+// sempre volta a cair na tela simples por padrão.
 // Rev009.4: (1) tela simples agora MESCLA glicemia + insulina lançadas em sequência (até 20
 // min de diferença) num único registro, em vez de criar dois separados — evita o problema de
 // "insulina virou observação" na tabela. (2) Registros: linha sem glicemia mas COM insulina
@@ -1617,10 +1626,16 @@ function tsMostrarTelaInicial(){
   const tela = document.getElementById('tela-simples');
   if(tela) tela.classList.add('ativa');
   tsAbrirVista('inicio');
+  sessionStorage.removeItem('pitoco_pulou_tela_simples');
 }
 function tsPularParaCompleto(){
   const tela = document.getElementById('tela-simples');
   if(tela) tela.classList.remove('ativa');
+  // lembra, dentro dessa sessão, que o tutor já escolheu o sistema completo — sem isso, um
+  // reload automático (ex: ao fechar o zoom de um gráfico) jogava de volta pra tela simples
+  // mesmo estando no sistema completo, porque initApp() sempre mostrava a tela simples de
+  // novo pra qualquer acesso "completo".
+  sessionStorage.setItem('pitoco_pulou_tela_simples', '1');
 }
 function tsGerarTeclado(tipo){
   const container = document.getElementById('ts-'+tipo+'-teclado');
@@ -1920,6 +1935,7 @@ function logout(){
   _sairFullscreenPaisagem();
   sessionStorage.removeItem('pitoco_auth');
   sessionStorage.removeItem('pitoco_modo');
+  sessionStorage.removeItem('pitoco_pulou_tela_simples');
   location.reload();
 }
 if(sessionStorage.getItem('pitoco_auth') === '1'){
@@ -2041,7 +2057,10 @@ function initApp(){
   const now = new Date();
   document.getElementById('in-data-glicemia').value = toLocalInput(now);
   aplicarModoAcesso();
-  if(modoAcesso === 'completo') tsMostrarTelaInicial(); // tutor cai na tela simplificada por padrão
+  // tutor cai na tela simplificada por padrão — EXCETO se ele já tinha escolhido o sistema
+  // completo nessa mesma sessão (ex: reload automático ao fechar o zoom de um gráfico não deve
+  // "puxar" de volta pra tela simples quem estava no sistema completo)
+  if(modoAcesso === 'completo' && sessionStorage.getItem('pitoco_pulou_tela_simples') !== '1') tsMostrarTelaInicial();
   renderProtocoloHipo(); // renderiza o padrão de cara; troca para o personalizado se/quando carregar do Firestore
   _pedirPermissaoNotificacao();
   _carregarLembreteState().then(()=> { verificarLembreteMedicao(); renderCheckboxesDiasGlicemicos(); renderAgenda(); });
