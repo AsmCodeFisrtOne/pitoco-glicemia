@@ -83,6 +83,50 @@ html.pitoco-logado #app{display:block;}
 
 /* ---------- App shell ---------- */
 #app{display:none;max-width:1200px;margin:0 auto;padding:20px 16px 80px;}
+
+/* ---------- Tela inicial simplificada (só acesso do tutor) ---------- */
+#tela-simples{position:fixed;inset:0;background:var(--bg);z-index:90;display:none;overflow-y:auto;}
+#tela-simples.ativa{display:flex;flex-direction:column;}
+.ts-vista{display:none;flex:1;flex-direction:column;padding:22px 20px;max-width:460px;margin:0 auto;width:100%;box-sizing:border-box;}
+.ts-vista.ativa{display:flex;}
+.ts-topo{text-align:center;margin-bottom:8px;}
+.ts-topo .paw{width:52px;height:52px;border-radius:14px;background:var(--primary-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px;object-fit:cover;}
+.ts-topo h1{font-size:20px;margin:0;color:var(--primary-dark);font-family:'Fraunces',serif;}
+.ts-topo .sub{font-size:13px;color:var(--muted);margin-top:4px;}
+.ts-botoes{flex:0.7;display:flex;flex-direction:column;justify-content:center;gap:26px;margin:14px 0;}
+.ts-botao-grande{display:flex;align-items:center;gap:16px;background:var(--surface);border-radius:20px;padding:22px 24px;box-shadow:var(--shadow);border:none;cursor:pointer;text-align:left;width:100%;}
+.ts-botao-grande .icone{font-size:36px;flex-shrink:0;}
+.ts-botao-grande .texto b{display:block;font-size:19px;color:var(--ink);font-weight:800;}
+.ts-botao-grande .texto span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;}
+.ts-botao-emergencia{display:flex;align-items:center;gap:16px;background:var(--danger);border-radius:20px;padding:22px 24px;box-shadow:var(--shadow);border:none;cursor:pointer;text-align:left;width:100%;}
+.ts-botao-emergencia .icone{font-size:36px;flex-shrink:0;}
+.ts-botao-emergencia .texto b{display:block;font-size:19px;color:#fff;font-weight:800;}
+.ts-botao-emergencia .texto span{display:block;font-size:12.5px;color:#F8E8E3;margin-top:2px;}
+.ts-pular-row{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:auto;padding:14px 6px;}
+.ts-pular-row .label{font-size:14.5px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;cursor:pointer;}
+.ts-btn-pular{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:14px 24px;font-size:17px;font-weight:700;color:var(--primary-dark);cursor:pointer;box-shadow:var(--shadow);}
+.ts-calc-topo{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.ts-voltar{width:38px;height:38px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:18px;border:none;cursor:pointer;flex-shrink:0;}
+.ts-calc-topo h2{font-family:'Fraunces',serif;font-size:19px;margin:0;color:var(--primary-dark);}
+.ts-mostrador{background:var(--surface);border-radius:20px;box-shadow:var(--shadow);padding:26px 20px;text-align:center;margin-bottom:20px;}
+.ts-mostrador .rotulo{font-size:12.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+.ts-mostrador .valor{font-family:'IBM Plex Mono',monospace;font-size:52px;font-weight:600;color:var(--ink);min-height:62px;}
+.ts-mostrador .unidade{font-size:15px;color:var(--muted);margin-top:4px;}
+.ts-teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;flex:1;}
+.ts-tecla{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);border:none;font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:64px;}
+.ts-tecla.apagar{font-size:64px;color:var(--muted);}
+.ts-btn-salvar{margin-top:18px;color:#fff;border:none;border-radius:16px;padding:20px;font-size:19px;font-weight:800;cursor:pointer;}
+.ts-popup-fundo{position:fixed;inset:0;background:rgba(31,42,46,.55);display:none;align-items:center;justify-content:center;padding:24px;z-index:95;}
+.ts-popup-fundo.ativo{display:flex;}
+.ts-popup-card{background:var(--surface);border-radius:22px;padding:32px 26px;text-align:center;width:100%;max-width:340px;box-shadow:var(--shadow);}
+.ts-popup-icone{font-size:36px;margin-bottom:6px;}
+.ts-popup-card h2{font-family:'Fraunces',serif;font-size:19px;margin:0 0 14px;color:var(--ink);}
+.ts-popup-valor{font-family:'IBM Plex Mono',monospace;font-size:38px;font-weight:600;margin-bottom:24px;}
+.ts-popup-valor span{font-size:16px;color:var(--muted);font-family:'Inter',sans-serif;}
+.ts-popup-botoes{display:flex;gap:10px;}
+.ts-popup-cancelar{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:15px;font-weight:700;color:var(--muted);cursor:pointer;}
+.ts-popup-confirmar{flex:1;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;}
+.ts-emergencia-card{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);padding:20px;border:2px solid var(--danger);}
 header.top{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 18px;flex-wrap:wrap;row-gap:6px;}
 header.top .id{display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:6px;}
 header.top .paw{width:38px;height:38px;border-radius:10px;object-fit:cover;}
@@ -303,6 +347,100 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <!-- ============ APP ============ -->
+<div id="tela-simples">
+  <!-- ---- VISTA: INÍCIO (3 botões grandes) ---- -->
+  <div class="ts-vista ativa" id="ts-inicio">
+    <div class="ts-topo">
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🐾</div>
+      <h1><span class="nome-pet-dinamico">Pitoco</span></h1>
+      <div class="sub">O que você precisa fazer agora?</div>
+    </div>
+    <div class="ts-botoes">
+      <button class="ts-botao-grande" onclick="tsAbrirVista('glicemia')">
+        <div class="icone">🩸</div>
+        <div class="texto"><b>Registrar Glicemia</b><span>Digite o número e salve</span></div>
+      </button>
+      <button class="ts-botao-grande" onclick="tsAbrirVista('insulina')">
+        <div class="icone">💉</div>
+        <div class="texto"><b>Registrar Insulina</b><span>Digite o valor aplicado</span></div>
+      </button>
+      <button class="ts-botao-emergencia" onclick="tsAbrirVista('emergencia')">
+        <div class="icone">🆘</div>
+        <div class="texto"><b>Emergência</b><span>Sinais de hipoglicemia — o que fazer agora</span></div>
+      </button>
+    </div>
+    <div class="ts-pular-row">
+      <span class="label" onclick="tsPularParaCompleto()">Ver menu completo</span>
+      <button class="ts-btn-pular" onclick="tsPularParaCompleto()">Pular ➡️</button>
+    </div>
+  </div>
+
+  <!-- ---- VISTA: CALCULADORA GLICEMIA ---- -->
+  <div class="ts-vista" id="ts-glicemia">
+    <div class="ts-calc-topo">
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')">←</button>
+      <h2>🩸 Registrar Glicemia</h2>
+    </div>
+    <div class="ts-mostrador">
+      <div class="rotulo">Valor da glicemia</div>
+      <div class="valor" id="ts-glicemia-valor">0</div>
+      <div class="unidade">mg/dL</div>
+    </div>
+    <div class="ts-teclado" id="ts-glicemia-teclado"></div>
+    <button class="ts-btn-salvar" style="background:var(--primary)" onclick="tsConfirmarPopup('glicemia')">Salvar Glicemia</button>
+  </div>
+
+  <!-- ---- VISTA: CALCULADORA INSULINA ---- -->
+  <div class="ts-vista" id="ts-insulina">
+    <div class="ts-calc-topo">
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')">←</button>
+      <h2>💉 Registrar Insulina</h2>
+    </div>
+    <div class="ts-mostrador">
+      <div class="rotulo">Dose aplicada</div>
+      <div class="valor" id="ts-insulina-valor">0</div>
+      <div class="unidade">UI</div>
+    </div>
+    <div class="ts-teclado" id="ts-insulina-teclado"></div>
+    <button class="ts-btn-salvar" style="background:#6b4ec9" onclick="tsConfirmarPopup('insulina')">Salvar Insulina</button>
+  </div>
+
+  <!-- ---- VISTA: EMERGÊNCIA ---- -->
+  <div class="ts-vista" id="ts-emergencia">
+    <div class="ts-calc-topo">
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')">←</button>
+      <h2 style="color:var(--danger)">🆘 Emergência</h2>
+    </div>
+    <div class="ts-emergencia-card">
+      <button class="btn" style="width:100%;font-size:15.5px;padding:16px 20px;margin-bottom:14px;background:var(--danger)" onclick="tsPularParaCompleto(); registrarEpisodioHipoglicemia();">📝 Registrar este episódio agora</button>
+      <div class="notice" style="border-color:var(--danger)">Hipoglicemia é uma emergência que pode evoluir rápido. Em caso de dúvida, aja primeiro e ligue para a veterinária em seguida.</div>
+      <h3>1) Reconheça os sinais</h3>
+      <p style="font-size:13.5px">Fome intensa, fraqueza, tremores, andar cambaleante, desorientação, ou convulsão.</p>
+      <div class="hipo-acoes-alvo"></div>
+      <h3>4) Sempre procure a veterinária se:</h3>
+      <ul style="font-size:13.5px;line-height:1.8">
+        <li>Houve convulsão;</li>
+        <li>Não houve resposta em poucos minutos ao açúcar de emergência;</li>
+        <li>Os sinais voltarem depois de melhorar;</li>
+        <li>Você não tem certeza do que está vendo — é sempre mais seguro procurar ajuda do que esperar.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ---- POPUP DE CONFIRMAÇÃO (compartilhado glicemia/insulina) ---- -->
+<div class="ts-popup-fundo" id="ts-popup-fundo">
+  <div class="ts-popup-card">
+    <div class="ts-popup-icone" id="ts-popup-icone">🩸</div>
+    <h2 id="ts-popup-titulo">Confirmar glicemia?</h2>
+    <div class="ts-popup-valor" id="ts-popup-valor">0 <span id="ts-popup-unidade">mg/dL</span></div>
+    <div class="ts-popup-botoes">
+      <button class="ts-popup-cancelar" onclick="tsFecharPopup()">Cancelar</button>
+      <button class="ts-popup-confirmar" id="ts-popup-confirmar" onclick="tsSalvarConfirmado()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <header class="top">
     <div class="id">
@@ -316,6 +454,7 @@ if ('serviceWorker' in navigator) {
   </header>
 
   <nav class="tabs">
+    <button id="tab-btn-inicio-simples" style="display:none;color:var(--primary-dark)" onclick="tsMostrarTelaInicial()">🏠 Início</button>
     <button data-tab="hipoglicemia" id="tab-btn-hipoglicemia" style="color:var(--danger)">🆘 Hipoglicemia</button>
     <button data-tab="mensagens" id="tab-btn-mensagens">💬 Mensagens<span class="badge-nova"></span></button>
     <button data-tab="lancar" class="active">Lançar</button>
@@ -740,12 +879,24 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="card">
+      <h2>🏠 Tela inicial simplificada (só acesso do tutor)</h2>
+      <p style="font-size:13.5px">Pensando em quem não tem intimidade com o app — como alguém da família ajudando a cuidar do pet numa emergência — o acesso do <b>tutor</b> abre, por padrão, numa tela bem mais simples do que a interface completa: três botões grandes (🩸 Registrar Glicemia, 💉 Registrar Insulina, 🆘 Emergência).</p>
+      <ul style="font-size:13.5px;line-height:1.8">
+        <li><b>Registrar Glicemia / Insulina:</b> um teclado grande, tipo calculadora, só com números. Antes de salvar de verdade, aparece um aviso pedindo pra confirmar o valor — evita registrar um número errado sem querer.</li>
+        <li><b>Emergência:</b> mostra o mesmo conteúdo da aba 🆘 Hipoglicemia, incluindo o botão de registrar o episódio.</li>
+        <li><b>"Ver menu completo" / "Pular ➡️":</b> leva pra interface completa, com todas as abas — pra quem já conhece o app.</li>
+      </ul>
+      <p style="font-size:13.5px">Essa tela <b>não expira nem aparece só uma vez</b> — o tutor pode ficar nela o tempo todo, sem nunca precisar tocar no menu completo, se não quiser. Uma vez no menu completo, um botão <b>"🏠 Início"</b> aparece na barra de abas pra voltar à tela simples a qualquer momento (por exemplo, na hora de passar o celular pra alguém). Profissional de saúde e Engenharia não veem essa tela — caem direto na interface completa, como sempre.</p>
+    </div>
+
+    <div class="card">
       <h2>Tipos de acesso</h2>
       <p style="font-size:13px;color:var(--muted);margin-top:0">O app tem três senhas diferentes. Visualmente é o mesmo app nos três — o que muda é quais abas e ferramentas aparecem.</p>
       <table>
         <thead><tr><th>Recurso</th><th>Tutor</th><th>Prof. saúde</th><th>Engenharia</th></tr></thead>
         <tbody>
           <tr><td>Lançar, relatórios, Agenda, Mensagens, Hipoglicemia</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td></tr>
+          <tr><td>Tela inicial simplificada (3 botões)</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--danger)">✗</td></tr>
           <tr><td>Aba ⚠️ Correção</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td></tr>
           <tr><td>Personalizar protocolo de hipoglicemia</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td></tr>
           <tr><td>Configurar dias da medição de acompanhamento</td><td style="text-align:center;color:var(--danger)">✗</td><td style="text-align:center;color:var(--target)">✓</td><td style="text-align:center;color:var(--target)">✓</td></tr>
@@ -1003,7 +1154,19 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev009.2"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.3"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.3: NOVA TELA INICIAL SIMPLIFICADA — só pro acesso do tutor. Ao logar, em vez de cair
+// na interface completa, aparecem 3 botões grandes: 🩸 Registrar Glicemia, 💉 Registrar
+// Insulina, 🆘 Emergência (mesmo conteúdo da aba Hipoglicemia). As calculadoras de Glicemia/
+// Insulina usam teclado numérico grande + popup de confirmação antes de gravar no Firestore
+// (registro só com glicemia OU só com insulina, dataGlicemia=agora; insulina usa o primeiro
+// tipo cadastrado como padrão). "Ver menu completo"/"Pular ➡️" leva pra interface normal; um
+// botão "🏠 Início" na barra de abas volta pra essa tela a qualquer momento. Não expira nem
+// aparece só uma vez — o tutor pode nunca tocar no menu completo, se não quiser. Profissional
+// de saúde e Engenharia não veem essa tela. renderProtocoloHipo() generalizado para atualizar
+// tanto a aba normal (#hipo-acoes-container) quanto a vista de emergência simplificada
+// (.hipo-acoes-alvo), evitando duplicar o conteúdo do protocolo em dois lugares. Manual do
+// app atualizado com uma seção explicando essa tela.
 // Rev009.2: detecção de efeito Somogyi deixou de ser gravada no banco (possivelSomogyi/
 // somogyiRefId) e passou a ser recalculada sempre na hora de exibir, a partir dos dados atuais
 // (_idsComPossivelSomogyi). Corrige um bug real: se a hipoglicemia que causou o alerta fosse
@@ -1414,18 +1577,125 @@ function aplicarNomePet(){
 /* ---------------- HIPOGLICEMIA: protocolo (padrão ou personalizado pela veterinária) ---------------- */
 let protocoloHipoCustom = null; // texto livre definido em Configurações; null/vazio = usa o padrão abaixo
 
+/* ---------------- TELA INICIAL SIMPLIFICADA (só acesso do tutor) ---------------- */
+let tsValorGlicemia = '';
+let tsValorInsulina = '';
+
+function tsAbrirVista(nome){
+  document.querySelectorAll('.ts-vista').forEach(v=> v.classList.remove('ativa'));
+  document.getElementById('ts-'+nome).classList.add('ativa');
+  if(nome === 'glicemia'){
+    tsValorGlicemia = '';
+    tsAtualizarMostrador('glicemia');
+    if(!document.getElementById('ts-glicemia-teclado').children.length) tsGerarTeclado('glicemia');
+  } else if(nome === 'insulina'){
+    tsValorInsulina = '';
+    tsAtualizarMostrador('insulina');
+    if(!document.getElementById('ts-insulina-teclado').children.length) tsGerarTeclado('insulina');
+  } else if(nome === 'emergencia'){
+    renderProtocoloHipo(); // garante que o texto (padrão ou personalizado pela veterinária) está atualizado
+  }
+}
+function tsMostrarTelaInicial(){
+  const tela = document.getElementById('tela-simples');
+  if(tela) tela.classList.add('ativa');
+  tsAbrirVista('inicio');
+}
+function tsPularParaCompleto(){
+  const tela = document.getElementById('tela-simples');
+  if(tela) tela.classList.remove('ativa');
+}
+function tsGerarTeclado(tipo){
+  const container = document.getElementById('ts-'+tipo+'-teclado');
+  const teclas = ['1','2','3','4','5','6','7','8','9', (tipo==='insulina'?',':''), '0', '⌫'];
+  container.innerHTML = teclas.map(t=>{
+    if(t === '') return '<div></div>';
+    const acao = t==='⌫' ? 'apagar' : t;
+    const classe = t==='⌫' ? 'ts-tecla apagar' : (t===',' ? 'ts-tecla ponto' : 'ts-tecla');
+    return `<button class="${classe}" onclick="tsDigitar('${tipo}','${acao}')">${t}</button>`;
+  }).join('');
+}
+function tsAtualizarMostrador(tipo){
+  const valor = tipo==='glicemia' ? tsValorGlicemia : tsValorInsulina;
+  document.getElementById('ts-'+tipo+'-valor').textContent = valor || '0';
+}
+function tsDigitar(tipo, tecla){
+  let valor = tipo==='glicemia' ? tsValorGlicemia : tsValorInsulina;
+  if(tecla === 'apagar'){
+    valor = valor.slice(0, -1);
+  } else if(tecla === ','){
+    if(!valor.includes(',')) valor += (valor===''?'0,':',');
+  } else if(valor.length < 6){
+    valor += tecla;
+  }
+  if(tipo==='glicemia') tsValorGlicemia = valor; else tsValorInsulina = valor;
+  tsAtualizarMostrador(tipo);
+}
+function tsConfirmarPopup(tipo){
+  const valorTexto = tipo==='glicemia' ? tsValorGlicemia : tsValorInsulina;
+  const numero = parseFloat((valorTexto||'0').replace(',', '.'));
+  if(!numero || numero <= 0){
+    customAlert(tipo==='glicemia' ? 'Digite um valor de glicemia antes de salvar.' : 'Digite o valor da dose antes de salvar.');
+    return;
+  }
+  document.getElementById('ts-popup-icone').textContent = tipo==='glicemia' ? '🩸' : '💉';
+  document.getElementById('ts-popup-titulo').textContent = tipo==='glicemia' ? 'Confirmar glicemia?' : 'Confirmar dose de insulina?';
+  const elValor = document.getElementById('ts-popup-valor');
+  elValor.innerHTML = `${valorTexto} <span>${tipo==='glicemia'?'mg/dL':'UI'}</span>`;
+  elValor.style.color = tipo==='glicemia' ? 'var(--primary-dark)' : '#6b4ec9';
+  const btnConfirmar = document.getElementById('ts-popup-confirmar');
+  btnConfirmar.style.background = tipo==='glicemia' ? 'var(--primary)' : '#6b4ec9';
+  btnConfirmar.dataset.tipo = tipo;
+  btnConfirmar.dataset.valor = numero;
+  document.getElementById('ts-popup-fundo').classList.add('ativo');
+}
+function tsFecharPopup(){
+  document.getElementById('ts-popup-fundo').classList.remove('ativo');
+}
+async function tsSalvarConfirmado(){
+  const btnConfirmar = document.getElementById('ts-popup-confirmar');
+  const tipo = btnConfirmar.dataset.tipo;
+  const numero = parseFloat(btnConfirmar.dataset.valor);
+  const agora = new Date().toISOString();
+  let dado;
+  if(tipo === 'glicemia'){
+    dado = {
+      petId: PET_ID, glicemia: numero, apenasObservacao: false, dataGlicemia: agora,
+      insulinaDose: null, insulinaTipo: null, dataInsulina: null, ultimaRefeicao: null,
+      observacao: null, curvaDia: false, localAplicacao: null, sinaisClinicos: [], atividadeFisica: null,
+      updatedAt: agora
+    };
+  } else {
+    // usa o primeiro tipo de insulina cadastrado em Configurações como padrão — tela simples
+    // não pergunta qual tipo, pra manter o fluxo curto
+    const tipoInsulinaPadrao = (typeof configInsulina !== 'undefined' && configInsulina && configInsulina.tipos && configInsulina.tipos[0]) || null;
+    dado = {
+      petId: PET_ID, glicemia: null, apenasObservacao: false, dataGlicemia: agora,
+      insulinaDose: numero, insulinaTipo: tipoInsulinaPadrao, dataInsulina: agora, ultimaRefeicao: null,
+      observacao: null, curvaDia: false, localAplicacao: null, sinaisClinicos: [], atividadeFisica: null,
+      updatedAt: agora
+    };
+  }
+  try{
+    await db.collection('registros').add(dado);
+    tsFecharPopup();
+    await customAlert(tipo==='glicemia' ? 'Glicemia registrada com sucesso.' : 'Insulina registrada com sucesso.', 'Salvo', '✅');
+    tsAbrirVista('inicio');
+  }catch(err){
+    await customAlert('Erro ao salvar: '+err.message);
+  }
+}
+
 function renderProtocoloHipo(){
-  const container = document.getElementById('hipo-acoes-container');
-  if(!container) return;
-  if(protocoloHipoCustom && protocoloHipoCustom.trim()){
+  const alvos = [document.getElementById('hipo-acoes-container'), ...document.querySelectorAll('.hipo-acoes-alvo')];
+  const html = (protocoloHipoCustom && protocoloHipoCustom.trim()) ? (()=>{
     const escapado = protocoloHipoCustom.trim().replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    container.innerHTML = `
+    return `
       <h3>2) Protocolo personalizado pela veterinária</h3>
       <div class="notice">Definido especificamente para o ${nomeDoPet()} — substitui as orientações padrão.</div>
       <p style="font-size:13.5px;white-space:pre-wrap">${escapado}</p>
     `;
-  } else {
-    container.innerHTML = `
+  })() : `
       <h3>2) Aja imediatamente, conforme a resposta do ${nomeDoPet()}</h3>
       <ul style="font-size:13.5px;line-height:1.8">
         <li><strong>Consciente e consegue comer:</strong> ofereça uma refeição rica em carboidrato de absorção rápida (arroz, pão, ração com um pouco de xarope de milho/Karo ou mel).</li>
@@ -1440,7 +1710,7 @@ function renderProtocoloHipo(){
         <li>Se a hipoglicemia foi causada por dose alta, a literatura costuma indicar reduzir a próxima dose em pelo menos 10% e refazer uma curva glicêmica para reajustar — mas confirme esse número com a veterinária antes de fixar a mudança.</li>
       </ul>
     `;
-  }
+  alvos.forEach(el=>{ if(el) el.innerHTML = html; });
 }
 
 async function salvarProtocoloHipo(){
@@ -1719,11 +1989,15 @@ function aplicarModoAcesso(){
   // com a senha de profissional de saúde não pode se autobloquear por aqui.
   const cardDescadastrarVet = document.getElementById('card-descadastrar-vet');
   if(cardDescadastrarVet) cardDescadastrarVet.style.display = (modoAcesso === 'completo' || modoAcesso === 'engenharia') ? '' : 'none';
+  // botão "🏠 Início" (volta pra tela simplificada) só existe pro tutor — só ele tem essa tela
+  const btnInicioSimples = document.getElementById('tab-btn-inicio-simples');
+  if(btnInicioSimples) btnInicioSimples.style.display = (modoAcesso === 'completo') ? '' : 'none';
 }
 function initApp(){
   const now = new Date();
   document.getElementById('in-data-glicemia').value = toLocalInput(now);
   aplicarModoAcesso();
+  if(modoAcesso === 'completo') tsMostrarTelaInicial(); // tutor cai na tela simplificada por padrão
   renderProtocoloHipo(); // renderiza o padrão de cara; troca para o personalizado se/quando carregar do Firestore
   _pedirPermissaoNotificacao();
   _carregarLembreteState().then(()=> { verificarLembreteMedicao(); renderCheckboxesDiasGlicemicos(); renderAgenda(); });
