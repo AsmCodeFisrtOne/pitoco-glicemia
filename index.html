@@ -1177,7 +1177,15 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev010.9"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev011.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev011.0: terceira e (esperamos) definitiva revisão da escala do gauge. Tentativa de escala
+// fixa em 1000 (testada visualmente antes de publicar) deixava a barra quase toda laranja em
+// qualquer configuração realista — descartada. Escala final: ESCALA_MAX = 3× o alvo máximo,
+// com um piso de segurança (hiper × 1.15) garantindo que a faixa hiper NUNCA desapareça da
+// barra quando o hiper configurado for maior que 3×alvoMax — bug real encontrado testando 6
+// cenários diferentes antes desse ajuste (casos com hiper=300/600 faziam o laranja sumir por
+// completo). Com isso, alvo apertado (ex: hipo=10/alvo 10-30/hiper=30) aparece pequeno e
+// proporcional de verdade, sem nenhuma faixa desaparecer em nenhum cenário testado.
 // Rev010.9: renderGauge() redesenhada com o modelo certo de proporcionalidade — testei 6+
 // cenários diferentes de configuração e achei que a abordagem de "margem" (Rev010.7) não
 // refletia a intenção real: Hipo e Hiper são faixas ABERTAS (tudo abaixo/acima de um valor),
@@ -3073,24 +3081,16 @@ function daysInMonth(key){
 
 /* ---------------- GAUGE ---------------- */
 function renderGauge(container, valor){
-  // Hipo e Hiper são faixas ABERTAS (tudo abaixo de X, tudo acima de Y) — não têm um tamanho
-  // real pra proporcionalizar, então cada uma ganha uma fatia FIXA na ponta da barra (15%).
-  // O miolo (do hipo até o hiper) é o que tem limites reais dos dois lados, e esse sim é
-  // dividido proporcionalmente pelos mg/dL de verdade — é aí que "fora"/"alvo"/"fora" vivem.
-  const RESERVA_PONTA = 15; // % fixo pra cada lado (hipo e hiper)
-  const meio = 100 - RESERVA_PONTA*2;
-  const spanMeio = configParam.hiper - configParam.hipo;
-  const escalaMeio = spanMeio > 0 ? meio / spanMeio : 0;
-  const posNoMeio = v => RESERVA_PONTA + (v - configParam.hipo) * escalaMeio;
-
-  const pct = valor <= configParam.hipo ? (RESERVA_PONTA * (valor/configParam.hipo)) // dentro da fatia fixa do hipo, proporcional só ali dentro
-            : valor >= configParam.hiper ? Math.min(100, 100 - RESERVA_PONTA + RESERVA_PONTA*0.3) // dentro da fatia fixa do hiper — não tenta ser exato, só indica "está lá"
-            : posNoMeio(valor);
-  const pctClamp = Math.max(0, Math.min(100, pct));
-  const pHipo = RESERVA_PONTA;
-  const pAlvoMin = Math.max(RESERVA_PONTA, Math.min(100-RESERVA_PONTA, posNoMeio(configParam.alvoMin)));
-  const pAlvoMax = Math.max(RESERVA_PONTA, Math.min(100-RESERVA_PONTA, posNoMeio(configParam.alvoMax)));
-  const pHiper = 100 - RESERVA_PONTA;
+  // Escala em função dos próprios parâmetros: fundo de 3x o valor máximo do alvo — mas nunca
+  // menor que o necessário pra caber o hiper com folga, senão a faixa laranja podia sumir
+  // por completo quando hiper > 3×alvoMax (bug real encontrado testando vários cenários).
+  const ESCALA_MAX = Math.max(configParam.alvoMax * 3, configParam.hiper * 1.15);
+  const clampPct = v => Math.max(0, Math.min(100, (v/ESCALA_MAX)*100));
+  const pct = clampPct(valor);
+  const pHipo = clampPct(configParam.hipo);
+  const pAlvoMin = clampPct(configParam.alvoMin);
+  const pAlvoMax = clampPct(configParam.alvoMax);
+  const pHiper = clampPct(configParam.hiper);
   // gradiente calculado a partir dos parâmetros reais configurados — cores sempre coladas
   // direto uma na outra, sem gap mínimo forçado (mesmo se os limiares configurados ficarem
   // bem próximos)
@@ -3114,7 +3114,7 @@ function renderGauge(container, valor){
   posAlvo = Math.max(4, Math.min(96, posAlvo));
   posHiper = Math.max(4, Math.min(96, posHiper));
   container.innerHTML = `
-    <div class="gauge" style="background:${gradiente}"><div class="marker" data-val="${valor}" style="left:${pctClamp}%; --balao-x:${pctClamp<=15?'0%':(pctClamp>=85?'-100%':'-50%')}"></div></div>
+    <div class="gauge" style="background:${gradiente}"><div class="marker" data-val="${valor}" style="left:${pct}%; --balao-x:${pct<=15?'0%':(pct>=85?'-100%':'-50%')}"></div></div>
     <div class="gauge-labels">
       <span style="left:${posHipo}%">Hipo</span>
       <span style="left:${posAlvo}%">Alvo (${configParam.alvoMin}-${configParam.alvoMax})</span>
