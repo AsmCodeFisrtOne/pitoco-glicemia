@@ -181,7 +181,8 @@ textarea{resize:vertical;min-height:56px;}
 .gauge .marker::after{content:attr(data-val) ' mg/dL';position:absolute;left:50%;bottom:calc(100% + 14px);transform:translateX(var(--balao-x, -50%));
   background:var(--ink);color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;
   padding:5px 11px;border-radius:9px;white-space:nowrap;box-shadow:0 4px 10px rgba(31,42,46,.28);}
-.gauge-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:18px;}
+.gauge-labels{position:relative;height:14px;font-size:10px;color:var(--muted);margin-bottom:18px;}
+.gauge-labels span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap;}
 
 /* stat cards */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:10px 0;}
@@ -1176,7 +1177,23 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev010.5"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev010.7"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev010.7: renderGauge() reescrita — a escala do desenho (antes fixa em 40-400 mg/dL) agora
+// se ajusta aos parâmetros configurados (margem de 15% do intervalo hipo-hiper, mínimo 10
+// mg/dL de cada lado). Com limiares baixos (ex: hipo=10, alvo 11-80, hiper=81), a escala
+// fixa "cortava fora" valores abaixo de 40, fazendo a faixa vermelha e boa parte da verde
+// desaparecerem do desenho mesmo estando configuradas. Rótulos (Hipo/Alvo/Hiper) também
+// passaram a ser posicionados no CENTRO REAL de cada faixa colorida (antes ficavam sempre
+// fixos em esquerda/centro/direita via flex, sem relação com a cor de verdade — "Alvo" podia
+// aparecer flutuando em cima de laranja). Gradiente continua estruturalmente sem buracos: cada
+// faixa termina exatamente onde a próxima começa (mesma variável de %), testado e confirmado
+// visualmente com os valores extremos do usuário (hipo=10/alvoMin=11/alvoMax=80/hiper=81).
+// Rev010.6: validação de Configurações → Parâmetros glicêmicos corrigida — antes exigia
+// hipo ESTRITAMENTE menor que o mínimo da faixa alvo (hipo >= alvoMin bloqueava), impedindo
+// configurar os dois iguais (ex: hipo=80, alvoMin=80). Agora aceita igual (só bloqueia se
+// hipo > alvoMin). Testado: classifica() já lidava bem com valores iguais, sem criar
+// "buraco" de classificação (glicemia = 80 exato cai limpo em 'alvo', sem ficar sem
+// categoria) — só a validação do formulário estava bloqueando isso sem necessidade.
 // Rev010.5: (1) card "Última leitura" agora fica com a mesma altura do card "Novo lançamento"
 // ao lado, em telas largas (>820px) — antes cada card respeitava só sua própria altura
 // (align-items:start, regra geral de section.panel.active), causando desalinhamento visual
@@ -3033,25 +3050,41 @@ function daysInMonth(key){
 
 /* ---------------- GAUGE ---------------- */
 function renderGauge(container, valor){
-  const min = 40, max = 400;
+  // a escala do desenho se ajusta aos parâmetros configurados (com uma folga de 15%, mínimo
+  // 10 mg/dL de cada lado) — antes era uma faixa fixa (40-400), que "cortava fora" os
+  // limiares quando alguém configurava valores bem baixos (ex: hipo=10), fazendo faixas
+  // inteiras desaparecerem do desenho mesmo existindo de verdade
+  const margem = Math.max((configParam.hiper - configParam.hipo) * 0.15, 10);
+  const min = configParam.hipo - margem, max = configParam.hiper + margem;
   const clampPct = v => Math.max(0, Math.min(100, ((v-min)/(max-min))*100));
   const pct = clampPct(valor);
   const pHipo = clampPct(configParam.hipo);
   const pAlvoMin = clampPct(configParam.alvoMin);
   const pAlvoMax = clampPct(configParam.alvoMax);
   const pHiper = clampPct(configParam.hiper);
-  // gradiente calculado a partir dos parâmetros reais configurados (não mais fixo) — cores
-  // sempre coladas direto uma na outra, sem gap mínimo forçado (mesmo se os limiares
-  // configurados ficarem bem próximos)
+  // gradiente calculado a partir dos parâmetros reais configurados — cores sempre coladas
+  // direto uma na outra, sem gap mínimo forçado (mesmo se os limiares configurados ficarem
+  // bem próximos)
   const gradiente = `linear-gradient(to right,
     var(--danger) 0%, var(--danger) ${pHipo}%,
     var(--accent-tint) ${pHipo}%, var(--accent-tint) ${pAlvoMin}%,
     var(--target) ${pAlvoMin}%, var(--target) ${pAlvoMax}%,
     var(--accent-tint) ${pAlvoMax}%, var(--accent-tint) ${pHiper}%,
     var(--accent) ${pHiper}%, var(--accent) 100%)`;
+  // rótulos posicionados no CENTRO de cada faixa de verdade (antes ficavam sempre fixos em
+  // esquerda/centro/direita, sem relação nenhuma com onde a cor realmente estava — por isso
+  // "Alvo" podia aparecer flutuando em cima de uma faixa laranja, dando impressão de bug)
+  const clampLabel = p => Math.max(6, Math.min(94, p));
+  const posHipo = clampLabel(pHipo / 2);
+  const posAlvo = clampLabel((pAlvoMin + pAlvoMax) / 2);
+  const posHiper = clampLabel((pHiper + 100) / 2);
   container.innerHTML = `
     <div class="gauge" style="background:${gradiente}"><div class="marker" data-val="${valor}" style="left:${pct}%; --balao-x:${pct<=15?'0%':(pct>=85?'-100%':'-50%')}"></div></div>
-    <div class="gauge-labels"><span>Hipo</span><span>Alvo (${configParam.alvoMin}-${configParam.alvoMax})</span><span>Hiper</span></div>
+    <div class="gauge-labels">
+      <span style="left:${posHipo}%">Hipo</span>
+      <span style="left:${posAlvo}%">Alvo (${configParam.alvoMin}-${configParam.alvoMax})</span>
+      <span style="left:${posHiper}%">Hiper</span>
+    </div>
   `;
 }
 function renderUltimaLeitura(){
@@ -4453,8 +4486,8 @@ function salvarConfig(){
     customAlert('A faixa alvo está inválida: o valor mínimo precisa ser menor que o máximo.');
     return;
   }
-  if(novo.hipo >= novo.alvoMin){
-    customAlert('O limite de hipoglicemia precisa ser menor que o mínimo da faixa alvo.');
+  if(novo.hipo > novo.alvoMin){
+    customAlert('O limite de hipoglicemia precisa ser menor ou igual ao mínimo da faixa alvo.');
     return;
   }
   if(novo.hiper < novo.alvoMax){
