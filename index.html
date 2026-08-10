@@ -3190,10 +3190,7 @@ function renderGauge(container, valor){
   container.innerHTML = `
     <div class="gauge" style="background:${gradiente}"><div class="marker" data-val="${valor}" style="left:${pct}%; --balao-x:${pct<=15?'0%':(pct>=85?'-100%':'-50%')}"></div></div>
     <div class="gauge-labels">
-      <span style="left:${Math.min(pHipo/2, 30)}%">≤ ${configParam.hipo}</span>
-      <span style="left:${Math.min((pHipo + pAlvo)/2, 60)}%">${configParam.alvoMin}–${configParam.alvoMax}</span>
-      <span style="left:${Math.max((pHiper + 100)/2, 75)}%">≥ ${configParam.hiper}</span>
-      <span style="left:100%;transform:translateX(-50%)">${ESCALA_MAX}</span>
+      <span style="left:${(pHipo + pAlvo)/2}%;transform:translateX(-50%)">${configParam.alvoMin}–${configParam.alvoMax}</span>
     </div>
   `;
 }
