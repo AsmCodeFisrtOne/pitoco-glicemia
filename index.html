@@ -379,7 +379,7 @@ if ('serviceWorker' in navigator) {
   <!-- ---- VISTA: CALCULADORA GLICEMIA ---- -->
   <div class="ts-vista" id="ts-glicemia">
     <div class="ts-calc-topo">
-      <button class="ts-voltar" onclick="tsAbrirVista('inicio')">←</button>
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)">➡️</span></button>
       <h2>🩸 Registrar Glicemia</h2>
     </div>
     <div class="ts-mostrador">
@@ -394,7 +394,7 @@ if ('serviceWorker' in navigator) {
   <!-- ---- VISTA: CALCULADORA INSULINA ---- -->
   <div class="ts-vista" id="ts-insulina">
     <div class="ts-calc-topo">
-      <button class="ts-voltar" onclick="tsAbrirVista('inicio')">←</button>
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)">➡️</span></button>
       <h2>💉 Registrar Insulina</h2>
     </div>
     <div class="ts-mostrador">
@@ -409,7 +409,7 @@ if ('serviceWorker' in navigator) {
   <!-- ---- VISTA: EMERGÊNCIA ---- -->
   <div class="ts-vista" id="ts-emergencia">
     <div class="ts-calc-topo">
-      <button class="ts-voltar" onclick="tsAbrirVista('inicio')">←</button>
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)">➡️</span></button>
       <h2 style="color:var(--danger)">🆘 Emergência</h2>
     </div>
     <div class="ts-emergencia-card">
@@ -1163,7 +1163,16 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev009.6"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.8"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.8: correção da Rev009.7 — a seta nas telas de Glicemia/Insulina/Emergência ficou com
+// o visual novo (a mesma seta ➡️ do "Pular", espelhada apontando pra esquerda), mas o
+// comportamento voltou a ser o original: leva de volta pra tela inicial simplificada
+// (tsAbrirVista('inicio')), não mais pro sistema completo. Era só pra mudar o desenho, a
+// função sempre foi pra continuar a mesma.
+// Rev009.7: seta "←" de voltar (Glicemia, Insulina, Emergência) trocada pela mesma seta ➡️ do
+// botão "Pular" — só que espelhada horizontalmente via transform:scaleX(-1), pra continuar
+// apontando visualmente pra esquerda. Comportamento mudou junto: agora leva direto pro menu
+// completo (tsPularParaCompleto), em vez de voltar pra tela inicial simplificada.
 // Rev009.6: setas da tela simplificada aumentadas — o emoji ➡️ do botão "Pular" (tela
 // inicial) foi separado em um span com font-size:26px, e o "←" de voltar (Glicemia, Insulina,
 // Emergência) foi de 18px pra 30px, com a caixinha aumentada de 38x38 pra 46x46 pra caber sem
