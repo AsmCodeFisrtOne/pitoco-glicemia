@@ -1177,7 +1177,15 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev010.7"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev010.8"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev010.8: BUG DE VERDADE corrigido — carregamento de config/parametros era um .get() único,
+// que só preenchia o formulário de Configurações, nunca mandava a barra "Última leitura" se
+// redesenhar. Resultado: a barra ficava presa mostrando os valores padrão (200-250) para
+// sempre, mesmo com parâmetros novos já salvos de verdade no Firestore (o formulário mostrava
+// certo, só a barra que ficava desatualizada). Trocado para onSnapshot (tempo real, mesmo
+// padrão de Mensagens/Agenda) + chamada de renderUltimaLeitura()/renderMonths() toda vez que
+// os parâmetros carregam ou mudam — corrige tanto a entrada no app quanto uma alteração feita
+// em outro aparelho/sessão.
 // Rev010.7: renderGauge() reescrita — a escala do desenho (antes fixa em 40-400 mg/dL) agora
 // se ajusta aos parâmetros configurados (margem de 15% do intervalo hipo-hiper, mínimo 10
 // mg/dL de cada lado). Com limiares baixos (ex: hipo=10, alvo 11-80, hiper=81), a escala
@@ -2166,13 +2174,18 @@ function initApp(){
     renderAgenda();
   });
 
-  db.collection('config').doc('parametros').get().then(doc=>{
+  db.collection('config').doc('parametros').onSnapshot(doc=>{
     if(doc.exists){ configParam = {intervaloCurvaHoras:1, ...doc.data()}; } // garante o padrão de 1h em documentos salvos antes desse campo existir
     document.getElementById('cfg-hipo').value = configParam.hipo;
     document.getElementById('cfg-alvo-min').value = configParam.alvoMin;
     document.getElementById('cfg-alvo-max').value = configParam.alvoMax;
     document.getElementById('cfg-hiper').value = configParam.hiper;
     document.getElementById('cfg-intervalo-curva').value = configParam.intervaloCurvaHoras;
+    // sem isso, a barra "Última leitura" ficava presa mostrando os valores padrão (200-250)
+    // até alguém trocar de aba por acaso — agora sempre redesenha com os parâmetros reais,
+    // tanto na entrada quanto se forem alterados em outro aparelho/sessão
+    renderUltimaLeitura();
+    renderMonths();
   });
 
   db.collection('config').doc(PET_ID).get().then(doc=>{
