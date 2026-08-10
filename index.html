@@ -2,6 +2,13 @@
 <html lang="pt-BR">
 <head>
 <script>
+// zera a posição de rolagem/zoom nativo do navegador antes de qualquer coisa pintar — segurança
+// extra pro caso de algum navegador ignorar o maximum-scale/user-scalable do viewport (abaixo) e
+// permitir zoom nativo pelo duplo toque que fecha o gráfico ampliado (ver Rev122.9); sem isso, o
+// reload que acontece nesse fechamento podia restaurar a página já zoomada/deslocada, cortando o
+// conteúdo nas bordas.
+if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
+window.scrollTo(0, 0);
 // roda ANTES de qualquer coisa pintar na tela — evita o "flash" da tela de login aparecendo
 // por um instante toda vez que a página recarrega (ex: ao fechar o zoom de um gráfico) para
 // quem já estava logado nessa sessão.
@@ -24,7 +31,7 @@ if (/iPhone/.test(navigator.userAgent)) {
 }
 </script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Pitoco • Controle Glicêmico</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1D4E4E">
@@ -1333,7 +1340,19 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev122.8"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev122.9"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev122.9: corrigida a tela inteira aparecendo cortada/deslocada nas bordas (cabeçalho, abas e
+// tabela todos com o mesmo padrão de corte) depois de fechar o zoom de um gráfico no celular.
+// Causa provável: o gesto de duplo toque que o app usa pra FECHAR o gráfico ampliado é o mesmo
+// gesto que o navegador usa nativamente pra dar ZOOM na página — como o viewport não bloqueava
+// esse zoom nativo, o duplo toque podia acionar os dois ao mesmo tempo, e o reload que fecha o
+// zoom (ver Rev122.8) restaurava a página já nesse estado zoomado/deslocado. Corrigido
+// adicionando maximum-scale=1.0 e user-scalable=no na meta viewport, bloqueando o zoom nativo do
+// navegador — o app já tem seu próprio recurso dedicado de ampliar gráficos, não depende do zoom
+// nativo da página em nenhum lugar. Também adicionado history.scrollRestoration='manual' +
+// window.scrollTo(0,0) bem no início do <head>, como segurança extra contra a página recarregar
+// numa posição de rolagem/zoom diferente do topo, caso algum navegador ignore a trava do
+// viewport. Ainda não testado num celular de verdade.
 // Rev122.8: revertida a estratégia da Rev122.7 (esperar o evento fullscreenchange antes de
 // recarregar) — provavelmente o evento não dispara de forma confiável no navegador/PWA do
 // celular usado nos testes, então o código sempre batia no teto de segurança de 800ms, deixando
