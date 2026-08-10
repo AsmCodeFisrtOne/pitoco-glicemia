@@ -444,8 +444,16 @@ function getLimitesGlicemia() {
     hipo.parentNode.replaceChild(novoHipo, hipo);
     hiper.parentNode.replaceChild(novoHiper, hiper);
 
-    novoHipo.addEventListener('input', () => { hipoEditadoManual = true; });
-    novoHiper.addEventListener('input', () => { hiperEditadoManual = true; });
+    novoHipo.addEventListener('input', () => {
+      const val = parseFloat(novoHipo.value);
+      const alvo = parseFloat(novoAlvoMin.value);
+      hipoEditadoManual = !isNaN(val) && val !== alvo;
+    });
+    novoHiper.addEventListener('input', () => {
+      const val = parseFloat(novoHiper.value);
+      const alvo = parseFloat(novoAlvoMax.value);
+      hiperEditadoManual = !isNaN(val) && val !== alvo;
+    });
 
     novoAlvoMin.addEventListener('input', () => {
       const v = parseFloat(novoAlvoMin.value);
@@ -485,7 +493,7 @@ if ('serviceWorker' in navigator) {
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
     <button class="logout" style="margin-top:10px" onclick="fecharApp()">Sair</button>
-    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev011.2</div>
+    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev011.3</div>
   </div>
 </div>
 
@@ -1309,7 +1317,7 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev011.2"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev011.3"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 // Rev011.0: terceira e (esperamos) definitiva revisão da escala do gauge. Tentativa de escala
 // fixa em 1000 (testada visualmente antes de publicar) deixava a barra quase toda laranja em
 // qualquer configuração realista — descartada. Escala final: ESCALA_MAX = 3× o alvo máximo,
@@ -3214,7 +3222,7 @@ function daysInMonth(key){
 
 /* ---------------- GAUGE ---------------- */
 function renderGauge(container, valor){
-  // Beta_Rev011.2 — Gauge proporcional de 3 cores (vermelho / verde / laranja)
+  // Beta_Rev011.3 — Gauge proporcional de 3 cores (vermelho / verde / laranja)
   // Escala: pelo menos 35% acima do hiper, nunca menor que 400 mg/dL
   const ESCALA_MAX = Math.max(
     400,
