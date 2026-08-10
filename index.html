@@ -84,6 +84,7 @@ button:active{transform:scale(0.96);opacity:.85;}
 html.pitoco-logado #gate{display:none;}
 html.pitoco-logado #app{display:block;}
 html.pitoco-restaurando-aba #app{visibility:hidden;}
+html.pitoco-fechando-zoom{visibility:hidden;}
 #gate .card{background:var(--surface);border-radius:var(--radius);padding:36px 32px;width:min(360px,88vw);box-shadow:var(--shadow);text-align:center;}
 #gate .paw{display:block;margin:0 auto 6px;width:64px;height:64px;border-radius:16px;object-fit:cover;}
 #gate h1{font-size:22px;margin:0 0 4px;}
@@ -1332,7 +1333,18 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev122.7"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev122.8"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev122.8: revertida a estratégia da Rev122.7 (esperar o evento fullscreenchange antes de
+// recarregar) — provavelmente o evento não dispara de forma confiável no navegador/PWA do
+// celular usado nos testes, então o código sempre batia no teto de segurança de 800ms, deixando
+// o fechamento do zoom mais lento do que antes (120ms fixos), sem resolver o "gráfico grande"
+// visualmente. Nova estratégia, independente de timing: a tela INTEIRA (html) fica
+// visibility:hidden (classe pitoco-fechando-zoom) já no instante do toque que fecha o zoom, antes
+// de sair do fullscreen — não importa quanto a animação de saída do sistema demore, o usuário só
+// vê uma tela em branco rápida até o reload, nunca o gráfico em tamanho de tela cheia no meio do
+// caminho. O reload voltou a usar um delay fixo curto (150ms), já que a tela escondida elimina a
+// necessidade de acertar o timing exato. Ainda não testado num celular de verdade — Claude não
+// tem acesso a navegador/dispositivo móvel neste ambiente para validar visualmente.
 // Rev122.7: corrigido o gráfico aparecendo "grande" por um instante ao fechar o zoom, até piscar
 // e voltar ao tamanho normal. Causa: _fecharZoomComRecarga() chamava document.exitFullscreen()
 // (assíncrono — no Android a saída da tela cheia tem animação própria do sistema) e recarregava
@@ -2745,6 +2757,12 @@ function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderF
       }).catch(()=>{});
     }
   } else {
+    // esconde a tela INTEIRA já neste instante, antes de sair do fullscreen — não importa quanto
+    // tempo a animação de saída do sistema (Android) demore, o usuário não vê o gráfico "grande"
+    // no meio do caminho, só uma tela em branco rápida até o reload. Substitui a estratégia
+    // anterior de tentar acertar o timing exato via evento fullscreenchange, que dependia desse
+    // evento disparar de forma confiável (nem todo navegador/PWA faz isso direito).
+    document.documentElement.classList.add('pitoco-fechando-zoom');
     _chartExpandidoAtual = null;
     _fecharZoomComRecarga();
     return; // a página vai recarregar — não precisa seguir com resize/rerender abaixo
@@ -2757,32 +2775,16 @@ function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderF
 }
 // Fechar o zoom recarrega a página de verdade — é o jeito mais confiável de corrigir uma faixa
 // da tela que às vezes fica "grudada" ao sair da tela cheia no Chrome Android (bug conhecido do
-// navegador, não do app). Guarda a aba atual para reabrir no mesmo lugar depois do reload.
+// navegador, não do app). Guarda a aba atual para reabrir no mesmo lugar depois do reload. Não
+// precisa mais esperar o evento fullscreenchange pra acertar o timing — a classe
+// pitoco-fechando-zoom (aplicada em _aplicarEstadoChartExpandido, antes de chamar essa função) já esconde
+// a tela inteira imediatamente, então o reload pode disparar num delay curto e fixo sem risco de
+// mostrar o gráfico "grande" no meio do caminho, não importa quanto a saída do fullscreen demore.
 function _fecharZoomComRecarga(){
   const abaAtiva = document.querySelector('nav.tabs button.active');
   if(abaAtiva) sessionStorage.setItem('pitoco_ultima_aba', abaAtiva.dataset.tab);
-  const estavaEmFullscreen = !!document.fullscreenElement;
   _sairFullscreenPaisagem();
-  if(!estavaEmFullscreen){
-    setTimeout(()=> location.reload(), 120);
-    return;
-  }
-  // document.exitFullscreen() é assíncrono — no Android a saída da tela cheia tem uma animação
-  // própria do sistema, que às vezes passa dos 120ms fixos que o código usava antes. Se o reload
-  // disparasse antes dessa animação terminar, o gráfico aparecia "grande" (ainda em tela cheia)
-  // até o próprio reload piscar a tela e só então voltar ao tamanho normal. Agora espera o evento
-  // fullscreenchange confirmar que a saída terminou de verdade antes de recarregar — com um teto
-  // de 800ms de segurança, caso o evento não dispare por algum motivo (navegador sem suporte etc).
-  let jaRecarregou = false;
-  const recarregarUmaVez = ()=>{
-    if(jaRecarregou) return;
-    jaRecarregou = true;
-    document.removeEventListener('fullscreenchange', aoConfirmarSaida);
-    setTimeout(()=> location.reload(), 60);
-  };
-  const aoConfirmarSaida = ()=>{ if(!document.fullscreenElement) recarregarUmaVez(); };
-  document.addEventListener('fullscreenchange', aoConfirmarSaida);
-  setTimeout(recarregarUmaVez, 800);
+  setTimeout(()=> location.reload(), 150);
 }
 // se o usuário sair da tela cheia pelo gesto do próprio sistema (botão voltar, deslizar) enquanto
 // um gráfico está em zoom, recarrega junto, pelo mesmo motivo acima.
