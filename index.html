@@ -1177,7 +1177,17 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev010.8"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev010.9"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev010.9: renderGauge() redesenhada com o modelo certo de proporcionalidade — testei 6+
+// cenários diferentes de configuração e achei que a abordagem de "margem" (Rev010.7) não
+// refletia a intenção real: Hipo e Hiper são faixas ABERTAS (tudo abaixo/acima de um valor),
+// sem tamanho próprio pra proporcionalizar, então cada uma agora ganha uma fatia FIXA (15%)
+// na ponta da barra. O miolo (do hipo até o hiper, que TEM limites nos dois lados) é dividido
+// proporcionalmente pelos mg/dL reais entre fora/alvo/fora. Resultado: com hipo=10, alvo
+// 10-30, hiper=30 (caso relatado pelo usuário), o verde agora ocupa ~70% da barra, não mais
+// espremido. Também corrigido bug real encontrado nos testes: rótulos "Hipo"/"Alvo"/"Hiper"
+// podiam se sobrepor e ficar ilegíveis quando as faixas eram estreitas e próximas (ex: hipo
+// igual a alvoMin) — agora há uma distância mínima forçada entre rótulos vizinhos.
 // Rev010.8: BUG DE VERDADE corrigido — carregamento de config/parametros era um .get() único,
 // que só preenchia o formulário de Configurações, nunca mandava a barra "Última leitura" se
 // redesenhar. Resultado: a barra ficava presa mostrando os valores padrão (200-250) para
@@ -3063,18 +3073,24 @@ function daysInMonth(key){
 
 /* ---------------- GAUGE ---------------- */
 function renderGauge(container, valor){
-  // a escala do desenho se ajusta aos parâmetros configurados (com uma folga de 15%, mínimo
-  // 10 mg/dL de cada lado) — antes era uma faixa fixa (40-400), que "cortava fora" os
-  // limiares quando alguém configurava valores bem baixos (ex: hipo=10), fazendo faixas
-  // inteiras desaparecerem do desenho mesmo existindo de verdade
-  const margem = Math.max((configParam.hiper - configParam.hipo) * 0.15, 10);
-  const min = configParam.hipo - margem, max = configParam.hiper + margem;
-  const clampPct = v => Math.max(0, Math.min(100, ((v-min)/(max-min))*100));
-  const pct = clampPct(valor);
-  const pHipo = clampPct(configParam.hipo);
-  const pAlvoMin = clampPct(configParam.alvoMin);
-  const pAlvoMax = clampPct(configParam.alvoMax);
-  const pHiper = clampPct(configParam.hiper);
+  // Hipo e Hiper são faixas ABERTAS (tudo abaixo de X, tudo acima de Y) — não têm um tamanho
+  // real pra proporcionalizar, então cada uma ganha uma fatia FIXA na ponta da barra (15%).
+  // O miolo (do hipo até o hiper) é o que tem limites reais dos dois lados, e esse sim é
+  // dividido proporcionalmente pelos mg/dL de verdade — é aí que "fora"/"alvo"/"fora" vivem.
+  const RESERVA_PONTA = 15; // % fixo pra cada lado (hipo e hiper)
+  const meio = 100 - RESERVA_PONTA*2;
+  const spanMeio = configParam.hiper - configParam.hipo;
+  const escalaMeio = spanMeio > 0 ? meio / spanMeio : 0;
+  const posNoMeio = v => RESERVA_PONTA + (v - configParam.hipo) * escalaMeio;
+
+  const pct = valor <= configParam.hipo ? (RESERVA_PONTA * (valor/configParam.hipo)) // dentro da fatia fixa do hipo, proporcional só ali dentro
+            : valor >= configParam.hiper ? Math.min(100, 100 - RESERVA_PONTA + RESERVA_PONTA*0.3) // dentro da fatia fixa do hiper — não tenta ser exato, só indica "está lá"
+            : posNoMeio(valor);
+  const pctClamp = Math.max(0, Math.min(100, pct));
+  const pHipo = RESERVA_PONTA;
+  const pAlvoMin = Math.max(RESERVA_PONTA, Math.min(100-RESERVA_PONTA, posNoMeio(configParam.alvoMin)));
+  const pAlvoMax = Math.max(RESERVA_PONTA, Math.min(100-RESERVA_PONTA, posNoMeio(configParam.alvoMax)));
+  const pHiper = 100 - RESERVA_PONTA;
   // gradiente calculado a partir dos parâmetros reais configurados — cores sempre coladas
   // direto uma na outra, sem gap mínimo forçado (mesmo se os limiares configurados ficarem
   // bem próximos)
@@ -3084,15 +3100,21 @@ function renderGauge(container, valor){
     var(--target) ${pAlvoMin}%, var(--target) ${pAlvoMax}%,
     var(--accent-tint) ${pAlvoMax}%, var(--accent-tint) ${pHiper}%,
     var(--accent) ${pHiper}%, var(--accent) 100%)`;
-  // rótulos posicionados no CENTRO de cada faixa de verdade (antes ficavam sempre fixos em
-  // esquerda/centro/direita, sem relação nenhuma com onde a cor realmente estava — por isso
-  // "Alvo" podia aparecer flutuando em cima de uma faixa laranja, dando impressão de bug)
-  const clampLabel = p => Math.max(6, Math.min(94, p));
-  const posHipo = clampLabel(pHipo / 2);
-  const posAlvo = clampLabel((pAlvoMin + pAlvoMax) / 2);
-  const posHiper = clampLabel((pHiper + 100) / 2);
+  // rótulos posicionados no CENTRO de cada faixa de verdade, com distância mínima entre
+  // vizinhos pra nunca sobrepor texto (empurra um pro lado se as faixas forem muito estreitas)
+  let posHipo = pHipo / 2;
+  let posAlvo = (pAlvoMin + pAlvoMax) / 2;
+  let posHiper = (pHiper + 100) / 2;
+  const MIN_SEP = 18;
+  if(posAlvo - posHipo < MIN_SEP) posAlvo = posHipo + MIN_SEP;
+  if(posHiper - posAlvo < MIN_SEP) posHiper = posAlvo + MIN_SEP;
+  if(posHiper - posAlvo < MIN_SEP) posAlvo = posHiper - MIN_SEP; // reajusta se estourou puxando de volta
+  if(posAlvo - posHipo < MIN_SEP) posHipo = posAlvo - MIN_SEP;
+  posHipo = Math.max(4, Math.min(96, posHipo));
+  posAlvo = Math.max(4, Math.min(96, posAlvo));
+  posHiper = Math.max(4, Math.min(96, posHiper));
   container.innerHTML = `
-    <div class="gauge" style="background:${gradiente}"><div class="marker" data-val="${valor}" style="left:${pct}%; --balao-x:${pct<=15?'0%':(pct>=85?'-100%':'-50%')}"></div></div>
+    <div class="gauge" style="background:${gradiente}"><div class="marker" data-val="${valor}" style="left:${pctClamp}%; --balao-x:${pctClamp<=15?'0%':(pctClamp>=85?'-100%':'-50%')}"></div></div>
     <div class="gauge-labels">
       <span style="left:${posHipo}%">Hipo</span>
       <span style="left:${posAlvo}%">Alvo (${configParam.alvoMin}-${configParam.alvoMax})</span>
