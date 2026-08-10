@@ -336,6 +336,91 @@ details.more-details[open] summary::before{transform:rotate(90deg);}
 .cm-box.grande .cm-actions{padding:16px 22px 24px;justify-content:center;}
 </style>
 <script>
+
+/* ---------- Gauge Dinâmico (3 cores) ---------- */
+function calcularMaxEscala(limites) {
+  // Teto da escala: pelo menos 35% acima do hiper, nunca menor que 400
+  return Math.max(400, Math.round(limites.hiper * 1.35));
+}
+
+function montarGradiente3Cores(limites, maxEscala) {
+  const pct = v => Math.min(100, Math.max(0, (v / maxEscala) * 100)).toFixed(1);
+  const pHipo  = pct(limites.hipo);
+  const pAlvo  = pct(limites.alvoMax);
+  const pHiper = pct(limites.hiper);
+
+  // 3 cores: vermelho (hipo) -> verde (alvo) -> laranja (hiper)
+  return `linear-gradient(to right,
+    var(--danger) 0%, var(--danger) ${pHipo}%,
+    var(--target) ${pHipo}%, var(--target) ${pAlvo}%,
+    var(--accent) ${pAlvo}%, var(--accent) ${pHiper}%,
+    var(--accent) ${pHiper}%, var(--accent) 100%
+  )`;
+}
+
+function atualizarGauge(valorGlicemia, limites, maxEscala) {
+  const gaugeWrap = document.getElementById('last-gauge-wrap');
+  if (!gaugeWrap) return;
+
+  // Garante que o DOM interno do gauge existe
+  if (!gaugeWrap.querySelector('.gauge')) {
+    gaugeWrap.innerHTML = `
+      <div class="gauge" style="position:relative;height:30px;border-radius:999px;margin:46px 0 6px;box-shadow:inset 0 1px 3px rgba(0,0,0,.15);">
+        <div class="marker" style="position:absolute;top:50%;width:3px;height:36px;background:#fff;border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.12);"></div>
+      </div>
+      <div class="gauge-labels" style="position:relative;height:14px;font-size:10px;color:var(--muted);margin-bottom:18px;">
+        <span style="position:absolute;top:0;left:0;transform:translateX(-50%);">0</span>
+        <span id="gauge-lbl-hipo" style="position:absolute;top:0;transform:translateX(-50%);">70</span>
+        <span id="gauge-lbl-alvo" style="position:absolute;top:0;transform:translateX(-50%);">100–250</span>
+        <span id="gauge-lbl-hiper" style="position:absolute;top:0;transform:translateX(-50%);">300</span>
+        <span id="gauge-lbl-max" style="position:absolute;top:0;right:0;transform:translateX(50%);">400</span>
+      </div>
+    `;
+  }
+
+  const gauge  = gaugeWrap.querySelector('.gauge');
+  const marker = gaugeWrap.querySelector('.marker');
+  const max    = maxEscala || calcularMaxEscala(limites);
+  const pct    = v => Math.min(100, Math.max(0, (v / max) * 100));
+
+  // Aplica gradiente dinâmico
+  gauge.style.background = montarGradiente3Cores(limites, max);
+
+  // Posiciona marcador
+  const pos = pct(valorGlicemia);
+  marker.style.left = pos + '%';
+  marker.setAttribute('data-val', Math.round(valorGlicemia));
+
+  // Ajusta balão para não sair pela borda
+  if (pos < 12)       marker.style.setProperty('--balao-x', '0%');
+  else if (pos > 88)  marker.style.setProperty('--balao-x', '-100%');
+  else                marker.style.setProperty('--balao-x', '-50%');
+
+  // Atualiza labels numéricas
+  const lblHipo = document.getElementById('gauge-lbl-hipo');
+  const lblAlvo = document.getElementById('gauge-lbl-alvo');
+  const lblHiper= document.getElementById('gauge-lbl-hiper');
+  const lblMax  = document.getElementById('gauge-lbl-max');
+  if (lblHipo)  { lblHipo.style.left  = pct(limites.hipo) + '%'; lblHipo.textContent  = limites.hipo; }
+  if (lblAlvo)  { lblAlvo.style.left  = pct(limites.alvoMax) + '%'; lblAlvo.textContent = limites.alvoMin + '–' + limites.alvoMax; }
+  if (lblHiper) { lblHiper.style.left = pct(limites.hiper) + '%'; lblHiper.textContent = limites.hiper; }
+  if (lblMax)   { lblMax.textContent  = max; }
+}
+
+function getLimitesGlicemia() {
+  // Tenta ler dos inputs da ficha; se não achar, usa padrão canino
+  const get = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? Number(el.value) || fallback : fallback;
+  };
+  return {
+    hipo:    get('cfg-hipo', 70),
+    alvoMin: get('cfg-alvo-min', 100),
+    alvoMax: get('cfg-alvo-max', 250),
+    hiper:   get('cfg-hiper', 300)
+  };
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
 }
@@ -353,7 +438,7 @@ if ('serviceWorker' in navigator) {
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
     <button class="logout" style="margin-top:10px" onclick="fecharApp()">Sair</button>
-    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;"></div>
+    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev011.1</div>
   </div>
 </div>
 
@@ -3081,44 +3166,30 @@ function daysInMonth(key){
 
 /* ---------------- GAUGE ---------------- */
 function renderGauge(container, valor){
-  // Escala em função dos próprios parâmetros: fundo de 3x o valor máximo do alvo — mas nunca
-  // menor que o necessário pra caber o hiper com folga, senão a faixa laranja podia sumir
-  // por completo quando hiper > 3×alvoMax (bug real encontrado testando vários cenários).
-  const ESCALA_MAX = Math.max(configParam.alvoMax * 3, configParam.hiper * 1.15);
+  // Beta_Rev011.1 — Gauge proporcional de 3 cores (vermelho / verde / laranja)
+  // Escala: pelo menos 35% acima do hiper, nunca menor que 400 mg/dL
+  const ESCALA_MAX = Math.max(400, Math.round(configParam.hiper * 1.35));
   const clampPct = v => Math.max(0, Math.min(100, (v/ESCALA_MAX)*100));
   const pct = clampPct(valor);
-  const pHipo = clampPct(configParam.hipo);
-  const pAlvoMin = clampPct(configParam.alvoMin);
-  const pAlvoMax = clampPct(configParam.alvoMax);
+  const pHipo  = clampPct(configParam.hipo);
+  const pAlvo  = clampPct(configParam.alvoMax);  // verde vai até alvoMax
   const pHiper = clampPct(configParam.hiper);
-  // gradiente calculado a partir dos parâmetros reais configurados — cores sempre coladas
-  // direto uma na outra, sem gap mínimo forçado (mesmo se os limiares configurados ficarem
-  // bem próximos)
+
+  // 3 cores: vermelho (≤hipo) → verde (hipo..alvoMax) → laranja (≥alvoMax)
   const gradiente = `linear-gradient(to right,
     var(--danger) 0%, var(--danger) ${pHipo}%,
-    var(--accent-tint) ${pHipo}%, var(--accent-tint) ${pAlvoMin}%,
-    var(--target) ${pAlvoMin}%, var(--target) ${pAlvoMax}%,
-    var(--accent-tint) ${pAlvoMax}%, var(--accent-tint) ${pHiper}%,
+    var(--target) ${pHipo}%, var(--target) ${pAlvo}%,
+    var(--accent) ${pAlvo}%, var(--accent) ${pHiper}%,
     var(--accent) ${pHiper}%, var(--accent) 100%)`;
-  // rótulos posicionados no CENTRO de cada faixa de verdade, com distância mínima entre
-  // vizinhos pra nunca sobrepor texto (empurra um pro lado se as faixas forem muito estreitas)
-  let posHipo = pHipo / 2;
-  let posAlvo = (pAlvoMin + pAlvoMax) / 2;
-  let posHiper = (pHiper + 100) / 2;
-  const MIN_SEP = 18;
-  if(posAlvo - posHipo < MIN_SEP) posAlvo = posHipo + MIN_SEP;
-  if(posHiper - posAlvo < MIN_SEP) posHiper = posAlvo + MIN_SEP;
-  if(posHiper - posAlvo < MIN_SEP) posAlvo = posHiper - MIN_SEP; // reajusta se estourou puxando de volta
-  if(posAlvo - posHipo < MIN_SEP) posHipo = posAlvo - MIN_SEP;
-  posHipo = Math.max(4, Math.min(96, posHipo));
-  posAlvo = Math.max(4, Math.min(96, posAlvo));
-  posHiper = Math.max(4, Math.min(96, posHiper));
+
+  // rótulos posicionados proporcionalmente aos limiares reais
   container.innerHTML = `
     <div class="gauge" style="background:${gradiente}"><div class="marker" data-val="${valor}" style="left:${pct}%; --balao-x:${pct<=15?'0%':(pct>=85?'-100%':'-50%')}"></div></div>
     <div class="gauge-labels">
-      <span style="left:${posHipo}%">Hipo</span>
-      <span style="left:${posAlvo}%">Alvo (${configParam.alvoMin}-${configParam.alvoMax})</span>
-      <span style="left:${posHiper}%">Hiper</span>
+      <span style="left:${Math.min(pHipo/2, 30)}%">≤ ${configParam.hipo}</span>
+      <span style="left:${Math.min((pHipo + pAlvo)/2, 60)}%">${configParam.alvoMin}–${configParam.alvoMax}</span>
+      <span style="left:${Math.max((pHiper + 100)/2, 75)}%">≥ ${configParam.hiper}</span>
+      <span style="left:100%;transform:translateX(-50%)">${ESCALA_MAX}</span>
     </div>
   `;
 }
