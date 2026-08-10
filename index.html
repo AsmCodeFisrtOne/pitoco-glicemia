@@ -65,7 +65,9 @@ if (/iPhone/.test(navigator.userAgent)) {
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 h1,h2,h3,.display{font-family:'Fraunces',serif;letter-spacing:-0.01em;}
 .mono{font-family:'IBM Plex Mono',monospace;}
-button{font-family:inherit;}
+button{font-family:inherit;transition:transform .08s ease, opacity .08s ease;}
+button:active{transform:scale(0.96);opacity:.85;}
+.chart-expandivel:active, .hist-curve:active, .month-header:active{transform:scale(0.98);opacity:.85;transition:transform .08s ease, opacity .08s ease;}
 ::selection{background:var(--primary-tint);}
 
 /* ---------- Login gate ---------- */
@@ -1163,7 +1165,12 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev009.8"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.9"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.9: sensação de "pressionado" adicionada em TODOS os botões do app de uma vez, via
+// regra CSS global (button:active{transform:scale(0.96);opacity:.85}) — não precisou mexer
+// botão por botão. Os 4 elementos clicáveis que são <div> (não <button>: os cards de gráfico
+// expansível, o histórico de curvas, e o cabeçalho de mês nos Registros) ganharam o mesmo
+// tratamento visual, com leve variação (scale 0.98) por serem elementos maiores/inteiros.
 // Rev009.8: correção da Rev009.7 — a seta nas telas de Glicemia/Insulina/Emergência ficou com
 // o visual novo (a mesma seta ➡️ do "Pular", espelhada apontando pra esquerda), mas o
 // comportamento voltou a ser o original: leva de volta pra tela inicial simplificada
