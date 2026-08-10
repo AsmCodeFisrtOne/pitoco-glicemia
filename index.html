@@ -438,7 +438,7 @@ if ('serviceWorker' in navigator) {
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
     <button class="logout" style="margin-top:10px" onclick="fecharApp()">Sair</button>
-    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev011.1</div>
+    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev011.2</div>
   </div>
 </div>
 
@@ -3166,9 +3166,13 @@ function daysInMonth(key){
 
 /* ---------------- GAUGE ---------------- */
 function renderGauge(container, valor){
-  // Beta_Rev011.1 — Gauge proporcional de 3 cores (vermelho / verde / laranja)
+  // Beta_Rev011.2 — Gauge proporcional de 3 cores (vermelho / verde / laranja)
   // Escala: pelo menos 35% acima do hiper, nunca menor que 400 mg/dL
-  const ESCALA_MAX = Math.max(400, Math.round(configParam.hiper * 1.35));
+  const ESCALA_MAX = Math.max(
+    400,
+    Math.round(valor * 1.30),
+    Math.round(configParam.hiper * 1.15)
+  );
   const clampPct = v => Math.max(0, Math.min(100, (v/ESCALA_MAX)*100));
   const pct = clampPct(valor);
   const pHipo  = clampPct(configParam.hipo);
