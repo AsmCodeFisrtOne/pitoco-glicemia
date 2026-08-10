@@ -421,6 +421,43 @@ function getLimitesGlicemia() {
   };
 }
 
+
+/* ---------- Auto-preenchimento hipo/hiper a partir do alvo ---------- */
+function setupAutoFillMetas() {
+  const alvoMin = document.getElementById('cfg-alvo-min');
+  const alvoMax = document.getElementById('cfg-alvo-max');
+  const hipo    = document.getElementById('cfg-hipo');
+  const hiper   = document.getElementById('cfg-hiper');
+  if (!alvoMin || !alvoMax || !hipo || !hiper) return;
+
+  // Marca se o usuário já editou manualmente
+  let hipoEditadoManual = false;
+  let hiperEditadoManual = false;
+
+  hipo.addEventListener('input', () => { hipoEditadoManual = true; });
+  hiper.addEventListener('input', () => { hiperEditadoManual = true; });
+
+  alvoMin.addEventListener('input', () => {
+    const v = parseFloat(alvoMin.value);
+    if (!isNaN(v) && !hipoEditadoManual) {
+      hipo.value = v;
+    }
+  });
+
+  alvoMax.addEventListener('input', () => {
+    const v = parseFloat(alvoMax.value);
+    if (!isNaN(v) && !hiperEditadoManual) {
+      hiper.value = v;
+    }
+  });
+
+  // Reset flags quando carrega nova ficha (chamar ao abrir aba config)
+  window.resetAutoFillFlags = function() {
+    hipoEditadoManual = false;
+    hiperEditadoManual = false;
+  };
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
 }
@@ -1262,7 +1299,7 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev011.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev011.2"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
 // Rev011.0: terceira e (esperamos) definitiva revisão da escala do gauge. Tentativa de escala
 // fixa em 1000 (testada visualmente antes de publicar) deixava a barra quase toda laranja em
 // qualquer configuração realista — descartada. Escala final: ESCALA_MAX = 3× o alvo máximo,
