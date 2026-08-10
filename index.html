@@ -530,7 +530,7 @@ if ('serviceWorker' in navigator) {
   <!-- ---- VISTA: CALCULADORA GLICEMIA ---- -->
   <div class="ts-vista" id="ts-glicemia">
     <div class="ts-calc-topo">
-      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="20" fill="var(--primary)"/><path d="M18 14 L32 24 L18 34 Z" fill="white"/></svg><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="18" fill="var(--target)" opacity="0.15"/><path d="M16 24 L22 30 L32 18" stroke="var(--target)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span></button>
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)">➡️</span></button>
       <h2><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><path d="M24 8 Q32 20 32 28 A8 8 0 0 1 16 28 Q16 20 24 8 Z" fill="var(--danger)" opacity="0.15"/><path d="M24 10 Q30 20 30 27 A6 6 0 0 1 18 27 Q18 20 24 10 Z" fill="var(--danger)"/></svg> Registrar Glicemia</h2>
     </div>
     <div class="ts-mostrador">
@@ -545,7 +545,7 @@ if ('serviceWorker' in navigator) {
   <!-- ---- VISTA: CALCULADORA INSULINA ---- -->
   <div class="ts-vista" id="ts-insulina">
     <div class="ts-calc-topo">
-      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="20" fill="var(--primary)"/><path d="M18 14 L32 24 L18 34 Z" fill="white"/></svg><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="18" fill="var(--target)" opacity="0.15"/><path d="M16 24 L22 30 L32 18" stroke="var(--target)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span></button>
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)">➡️</span></button>
       <h2><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><rect x="20" y="8" width="8" height="28" rx="2" fill="var(--surface)" stroke="var(--primary)" stroke-width="2.5"/><rect x="22" y="14" width="4" height="16" rx="1" fill="#E8A33D" opacity="0.4"/><line x1="24" y1="36" x2="24" y2="42" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="42" x2="30" y2="42" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round"/><line x1="24" y1="4" x2="24" y2="8" stroke="var(--danger)" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="4" x2="28" y2="4" stroke="var(--danger)" stroke-width="2" stroke-linecap="round"/></svg> Registrar Insulina</h2>
     </div>
     <div class="ts-mostrador">
@@ -560,7 +560,7 @@ if ('serviceWorker' in navigator) {
   <!-- ---- VISTA: EMERGÊNCIA ---- -->
   <div class="ts-vista" id="ts-emergencia">
     <div class="ts-calc-topo">
-      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="20" fill="var(--primary)"/><path d="M18 14 L32 24 L18 34 Z" fill="white"/></svg><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="18" fill="var(--target)" opacity="0.15"/><path d="M16 24 L22 30 L32 18" stroke="var(--target)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span></button>
+      <button class="ts-voltar" onclick="tsAbrirVista('inicio')"><span style="display:inline-block;transform:scaleX(-1)">➡️</span></button>
       <h2 style="color:var(--danger)"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="20" fill="var(--danger)" opacity="0.12"/><circle cx="24" cy="24" r="16" fill="var(--danger)"/><rect x="21" y="14" width="6" height="12" rx="1" fill="white"/><circle cx="24" cy="32" r="2.5" fill="white"/></svg> Emergência</h2>
     </div>
     <div class="ts-emergencia-card">
@@ -1322,7 +1322,12 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO <svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><line x1="4" y1="24" x2="44" y2="24" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><ellipse cx="24" cy="24" rx="5" ry="4" fill="var(--primary)" opacity="0.15"/><ellipse cx="21" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="27" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="19.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="28.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="24" cy="27" rx="2" ry="1.5" fill="var(--primary)"/></svg> PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev122.1"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev122.2"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev122.2: seta de voltar (ts-voltar) nas telas de Glicemia, Insulina e Emergência também
+// revertida pro emoji ➡️ espelhado (transform:scaleX(-1)) — a Rev122.1 tinha corrigido só a
+// tela inicial, mas a seta de voltar dessas outras 3 telas continuava com o SVG antigo (dois
+// SVGs sobrepostos: círculo+triângulo "play" e círculo+check). Correção cirúrgica: só o botão
+// da seta mudou nas 3 telas, os ícones dos títulos (🩸/💉/🆘) e o resto continuam como estavam.
 // Rev122.1: revertidos os ícones SVG customizados de volta para os emojis originais, só na
 // tela inicial simplificada (ts-inicio): 🐾 (pata), 🩸 (glicemia), 💉 (insulina), 🆘
 // (emergência), ➡️ (pular), e o "—" que tinha virado um SVG de rostinho por engano no meio
