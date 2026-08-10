@@ -8,6 +8,15 @@
 if (sessionStorage.getItem('pitoco_auth') === '1') {
   document.documentElement.classList.add('pitoco-logado');
 }
+// mesma lógica acima, mas para o "flash" da aba Lançar aparecendo por um instante durante o
+// reload proposital que acontece ao fechar o zoom de um gráfico (ver _fecharZoomComRecarga /
+// _restaurarUltimaAba no script principal) — a aba Lançar vem marcada como "active" direto no
+// HTML estático, então sem isso ela pisca na tela até o JS confirmar os dados do Firestore e
+// trocar pra aba de verdade. Só ativa quando pitoco_ultima_aba existe (ou seja, só durante esse
+// reload específico) — login normal e reload manual da página não são afetados.
+if (sessionStorage.getItem('pitoco_ultima_aba')) {
+  document.documentElement.classList.add('pitoco-restaurando-aba');
+}
 // marca cedo se é iPhone, pro CSS já esconder a dica "toque para ampliar" nos gráficos —
 // o zoom fica desativado nesse aparelho (ver toggleChartExpandido no script principal).
 if (/iPhone/.test(navigator.userAgent)) {
@@ -74,6 +83,7 @@ button:active{transform:scale(0.96);opacity:.85;}
 #gate{position:fixed;inset:0;background:var(--primary-dark);display:flex;align-items:center;justify-content:center;z-index:100;}
 html.pitoco-logado #gate{display:none;}
 html.pitoco-logado #app{display:block;}
+html.pitoco-restaurando-aba #app{visibility:hidden;}
 #gate .card{background:var(--surface);border-radius:var(--radius);padding:36px 32px;width:min(360px,88vw);box-shadow:var(--shadow);text-align:center;}
 #gate .paw{display:block;margin:0 auto 6px;width:64px;height:64px;border-radius:16px;object-fit:cover;}
 #gate h1{font-size:22px;margin:0 0 4px;}
@@ -1322,7 +1332,16 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev122.5"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev122.6"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev122.6: corrigido o "flash" da aba Lançar aparecendo por um instante ao fechar o zoom de um
+// gráfico (Semanal/Mensal) — o reload proposital que contorna o bug de repaint do Chrome Android
+// (ver Rev008.3) reabre com a marcação estática "active" da aba Lançar antes do JS confirmar os
+// dados do Firestore e trocar pra aba de verdade (_restaurarUltimaAba), causando o piscar. Mesmo
+// truque já usado pro flash da tela de login (pitoco-logado): script inline no <head> detecta
+// sessionStorage.pitoco_ultima_aba ANTES de qualquer coisa pintar e adiciona a classe
+// pitoco-restaurando-aba no <html>, que esconde #app (visibility:hidden) até
+// _restaurarUltimaAba() já ter clicado na aba certa. Só ativa durante esse reload específico —
+// login normal e reload manual da página continuam mostrando a tela normalmente sem atraso.
 // Rev122.5: corrigido o pill "📝 Observação" / "💉 Só insulina" (tabela de Histórico por mês)
 // quebrando em duas linhas (ícone em cima, texto embaixo) em colunas estreitas — a classe .pill
 // era inline-block sem white-space:nowrap, então o espaço entre o emoji e a palavra virava um
@@ -2245,11 +2264,14 @@ function _restaurarUltimaAba(){
   if(!aba) return;
   sessionStorage.removeItem('pitoco_ultima_aba');
   const btn = document.querySelector(`nav.tabs button[data-tab="${aba}"]`);
-  if(!btn) return;
+  if(!btn){ document.documentElement.classList.remove('pitoco-restaurando-aba'); return; } // segurança: se a aba salva não existir mais, revela o app do jeito que já estava (Lançar) em vez de deixar escondido pra sempre
   let tentativas = 0;
   const tentar = ()=>{
     tentativas++;
-    if(_registrosPrimeiraCargaFeita || tentativas > 50){ btn.click(); } // 50×100ms = 5s de teto, depois clica de qualquer jeito
+    if(_registrosPrimeiraCargaFeita || tentativas > 50){
+      btn.click(); // 50×100ms = 5s de teto, depois clica de qualquer jeito
+      document.documentElement.classList.remove('pitoco-restaurando-aba'); // só revela o app aqui, já na aba certa — evita o "flash" da aba Lançar
+    }
     else setTimeout(tentar, 100);
   };
   tentar();
