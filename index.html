@@ -106,7 +106,7 @@ html.pitoco-logado #app{display:block;}
 .ts-pular-row .label{font-size:14.5px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;cursor:pointer;}
 .ts-btn-pular{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:14px 24px;font-size:17px;font-weight:700;color:var(--primary-dark);cursor:pointer;box-shadow:var(--shadow);}
 .ts-calc-topo{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
-.ts-voltar{width:38px;height:38px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:18px;border:none;cursor:pointer;flex-shrink:0;}
+.ts-voltar{width:46px;height:46px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:30px;border:none;cursor:pointer;flex-shrink:0;}
 .ts-calc-topo h2{font-family:'Fraunces',serif;font-size:19px;margin:0;color:var(--primary-dark);}
 .ts-mostrador{background:var(--surface);border-radius:20px;box-shadow:var(--shadow);padding:26px 20px;text-align:center;margin-bottom:20px;}
 .ts-mostrador .rotulo{font-size:12.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
@@ -372,7 +372,7 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="ts-pular-row">
       <span class="label" onclick="tsPularParaCompleto()">Ver menu completo</span>
-      <button class="ts-btn-pular" onclick="tsPularParaCompleto()">Pular ➡️</button>
+      <button class="ts-btn-pular" onclick="tsPularParaCompleto()">Pular <span style="font-size:26px;line-height:1">➡️</span></button>
     </div>
   </div>
 
@@ -1163,7 +1163,11 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev009.5"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev009.6"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev009.6: setas da tela simplificada aumentadas — o emoji ➡️ do botão "Pular" (tela
+// inicial) foi separado em um span com font-size:26px, e o "←" de voltar (Glicemia, Insulina,
+// Emergência) foi de 18px pra 30px, com a caixinha aumentada de 38x38 pra 46x46 pra caber sem
+// ficar apertado.
 // Rev009.5: (1) botão "Logoff" adicionado na tela inicial simplificada (faltava — o tutor não
 // tinha como sair sem ir pro sistema completo primeiro). (2) Corrigido: ao dar zoom num
 // gráfico dentro do sistema completo e fechar o zoom (o que recarrega a página, ver Rev008.3),
