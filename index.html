@@ -1168,7 +1168,18 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev010.1"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev010.3"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev010.3: revertido o gap mínimo da Rev010.2 — o usuário decidiu que prefere as cores do
+// gauge sempre coladas direto uma na outra, mesmo quando os limiares configurados ficam bem
+// próximos (sem faixa clara de transição forçada). renderGauge() voltou a usar os percentuais
+// reais (pHipo/pAlvoMin/pAlvoMax/pHiper) sem nenhum ajuste artificial de largura mínima.
+// Rev010.2: corrigida a "costura" no gauge da última leitura — quando os limiares configurados
+// (hipo/alvoMin, ou alvoMax/hiper) ficavam muito próximos, a faixa clara de transição entre
+// eles colapsava quase a zero, fazendo duas cores fortes (ex: vermelho e verde) ficarem coladas
+// sem separação visual. Agora renderGauge() garante um mínimo de 3 pontos percentuais pra essas
+// faixas claras. IMPORTANTE: isso é só visual, dentro da própria função — classifica() (usada
+// em toda classificação real de hipo/alvo/hiper/alertas/relatórios) não foi tocada e continua
+// usando os valores reais configurados, sem nenhum ajuste.
 // Rev010.1: corrigido o balão do gauge (Rev010.0) vazando pra fora do card quando o valor
 // estava bem nas pontas (glicemia muito baixa ou muito alta) — antes ele sempre centralizava
 // no ponto exato (translateX(-50%)), então perto da borda esquerda/direita da barra, metade do
@@ -3011,7 +3022,9 @@ function renderGauge(container, valor){
   const pAlvoMin = clampPct(configParam.alvoMin);
   const pAlvoMax = clampPct(configParam.alvoMax);
   const pHiper = clampPct(configParam.hiper);
-  // gradiente calculado a partir dos parâmetros reais configurados (não mais fixo)
+  // gradiente calculado a partir dos parâmetros reais configurados (não mais fixo) — cores
+  // sempre coladas direto uma na outra, sem gap mínimo forçado (mesmo se os limiares
+  // configurados ficarem bem próximos)
   const gradiente = `linear-gradient(to right,
     var(--danger) 0%, var(--danger) ${pHipo}%,
     var(--accent-tint) ${pHipo}%, var(--accent-tint) ${pAlvoMin}%,
