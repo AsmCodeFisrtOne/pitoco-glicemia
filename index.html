@@ -423,40 +423,50 @@ function getLimitesGlicemia() {
 
 
 /* ---------- Auto-preenchimento hipo/hiper a partir do alvo ---------- */
-function setupAutoFillMetas() {
-  const alvoMin = document.getElementById('cfg-alvo-min');
-  const alvoMax = document.getElementById('cfg-alvo-max');
-  const hipo    = document.getElementById('cfg-hipo');
-  const hiper   = document.getElementById('cfg-hiper');
-  if (!alvoMin || !alvoMax || !hipo || !hiper) return;
-
-  // Marca se o usuário já editou manualmente
+(function(){
   let hipoEditadoManual = false;
   let hiperEditadoManual = false;
 
-  hipo.addEventListener('input', () => { hipoEditadoManual = true; });
-  hiper.addEventListener('input', () => { hiperEditadoManual = true; });
+  window.setupAutoFillMetas = function() {
+    const alvoMin = document.getElementById('cfg-alvo-min');
+    const alvoMax = document.getElementById('cfg-alvo-max');
+    const hipo    = document.getElementById('cfg-hipo');
+    const hiper   = document.getElementById('cfg-hiper');
+    if (!alvoMin || !alvoMax || !hipo || !hiper) return;
 
-  alvoMin.addEventListener('input', () => {
-    const v = parseFloat(alvoMin.value);
-    if (!isNaN(v) && !hipoEditadoManual) {
-      hipo.value = v;
-    }
-  });
+    // Remove listeners antigos para não duplicar
+    const novoAlvoMin = alvoMin.cloneNode(true);
+    const novoAlvoMax = alvoMax.cloneNode(true);
+    const novoHipo    = hipo.cloneNode(true);
+    const novoHiper   = hiper.cloneNode(true);
+    alvoMin.parentNode.replaceChild(novoAlvoMin, alvoMin);
+    alvoMax.parentNode.replaceChild(novoAlvoMax, alvoMax);
+    hipo.parentNode.replaceChild(novoHipo, hipo);
+    hiper.parentNode.replaceChild(novoHiper, hiper);
 
-  alvoMax.addEventListener('input', () => {
-    const v = parseFloat(alvoMax.value);
-    if (!isNaN(v) && !hiperEditadoManual) {
-      hiper.value = v;
-    }
-  });
+    novoHipo.addEventListener('input', () => { hipoEditadoManual = true; });
+    novoHiper.addEventListener('input', () => { hiperEditadoManual = true; });
 
-  // Reset flags quando carrega nova ficha (chamar ao abrir aba config)
+    novoAlvoMin.addEventListener('input', () => {
+      const v = parseFloat(novoAlvoMin.value);
+      if (!isNaN(v) && !hipoEditadoManual) {
+        novoHipo.value = v;
+      }
+    });
+
+    novoAlvoMax.addEventListener('input', () => {
+      const v = parseFloat(novoAlvoMax.value);
+      if (!isNaN(v) && !hiperEditadoManual) {
+        novoHiper.value = v;
+      }
+    });
+  };
+
   window.resetAutoFillFlags = function() {
     hipoEditadoManual = false;
     hiperEditadoManual = false;
   };
-}
+})();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
@@ -2236,6 +2246,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab==='exames') renderExamesTab();
     if(btn.dataset.tab==='mensagens') _msgMarcarComoVistas();
     if(btn.dataset.tab==='agenda') renderAgenda();
+    if(btn.dataset.tab==='config') { resetAutoFillFlags(); setupAutoFillMetas(); }
   });
 });
 
