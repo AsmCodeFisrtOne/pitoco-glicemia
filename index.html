@@ -503,27 +503,27 @@ if ('serviceWorker' in navigator) {
   <div class="ts-vista ativa" id="ts-inicio">
     <button style="position:absolute;top:22px;right:20px;background:none;border:1px solid var(--line);color:var(--muted);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer" onclick="logout()">Logoff</button>
     <div class="ts-topo">
-      <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="20" fill="var(--primary)" opacity="0.1"/><ellipse cx="24" cy="20" rx="7" ry="5.5" fill="var(--primary)"/><ellipse cx="15" cy="14" rx="3" ry="2.3" fill="var(--primary)"/><ellipse cx="33" cy="14" rx="3" ry="2.3" fill="var(--primary)"/><ellipse cx="12" cy="22" rx="2.5" ry="2" fill="var(--primary)"/><ellipse cx="36" cy="22" rx="2.5" ry="2" fill="var(--primary)"/></svg></div>
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🐾</div>
       <h1><span class="nome-pet-dinamico">Pitoco</span></h1>
       <div class="sub">O que você precisa fazer agora?</div>
     </div>
     <div class="ts-botoes">
       <button class="ts-botao-grande" onclick="tsAbrirVista('glicemia')">
-        <div class="icone"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><path d="M24 8 Q32 20 32 28 A8 8 0 0 1 16 28 Q16 20 24 8 Z" fill="var(--danger)" opacity="0.15"/><path d="M24 10 Q30 20 30 27 A6 6 0 0 1 18 27 Q18 20 24 10 Z" fill="var(--danger)"/></svg></div>
+        <div class="icone">🩸</div>
         <div class="texto"><b>Registrar Glicemia</b><span>Digite o número e salve</span></div>
       </button>
       <button class="ts-botao-grande" onclick="tsAbrirVista('insulina')">
-        <div class="icone"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><rect x="20" y="8" width="8" height="28" rx="2" fill="var(--surface)" stroke="var(--primary)" stroke-width="2.5"/><rect x="22" y="14" width="4" height="16" rx="1" fill="#E8A33D" opacity="0.4"/><line x1="24" y1="36" x2="24" y2="42" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="42" x2="30" y2="42" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round"/><line x1="24" y1="4" x2="24" y2="8" stroke="var(--danger)" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="4" x2="28" y2="4" stroke="var(--danger)" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div class="icone">💉</div>
         <div class="texto"><b>Registrar Insulina</b><span>Digite o valor aplicado</span></div>
       </button>
       <button class="ts-botao-emergencia" onclick="tsAbrirVista('emergencia')">
-        <div class="icone"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="20" fill="var(--danger)" opacity="0.12"/><circle cx="24" cy="24" r="16" fill="var(--danger)"/><rect x="21" y="14" width="6" height="12" rx="1" fill="white"/><circle cx="24" cy="32" r="2.5" fill="white"/></svg></div>
-        <div class="texto"><b>Emergência</b><span>Sinais de hipoglicemia <svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><line x1="4" y1="24" x2="44" y2="24" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><ellipse cx="24" cy="24" rx="5" ry="4" fill="var(--primary)" opacity="0.15"/><ellipse cx="21" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="27" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="19.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="28.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="24" cy="27" rx="2" ry="1.5" fill="var(--primary)"/></svg> o que fazer agora</span></div>
+        <div class="icone">🆘</div>
+        <div class="texto"><b>Emergência</b><span>Sinais de hipoglicemia — o que fazer agora</span></div>
       </button>
     </div>
     <div class="ts-pular-row">
       <span class="label" onclick="tsPularParaCompleto()">Ver menu completo</span>
-      <button class="ts-btn-pular" onclick="tsPularParaCompleto()">Pular <span style="font-size:26px;line-height:1"><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="20" fill="var(--primary)"/><path d="M18 14 L32 24 L18 34 Z" fill="white"/></svg><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="18" fill="var(--target)" opacity="0.15"/><path d="M16 24 L22 30 L32 18" stroke="var(--target)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span></button>
+      <button class="ts-btn-pular" onclick="tsPularParaCompleto()">Pular <span style="font-size:26px;line-height:1">➡️</span></button>
     </div>
   </div>
 
@@ -906,7 +906,7 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="card" id="card-senha-vet">
       <h2>Senha de acesso para o profissional de saúde</h2>
-      <div class="notice">Opcional. Dá acesso ao app inteiro (igual ao acesso do tutor), sem precisar compartilhar a senha principal <svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><line x1="4" y1="24" x2="44" y2="24" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><ellipse cx="24" cy="24" rx="5" ry="4" fill="var(--primary)" opacity="0.15"/><ellipse cx="21" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="27" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="19.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="28.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="24" cy="27" rx="2" ry="1.5" fill="var(--primary)"/></svg> a única diferença é um aviso "<svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><path d="M4 24 Q24 8 44 24 Q24 40 4 24 Z" fill="var(--primary)" opacity="0.1" stroke="var(--primary)" stroke-width="2.5"/><circle cx="24" cy="24" r="8" fill="var(--surface)" stroke="var(--primary)" stroke-width="2.5"/><circle cx="24" cy="24" r="4" fill="var(--primary)"/><circle cx="26" cy="22" r="1.5" fill="white"/></svg><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="18" fill="var(--target)" opacity="0.15"/><path d="M16 24 L22 30 L32 18" stroke="var(--target)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Acesso profissional de saúde" que aparece no cabeçalho, para identificar que foi essa senha que foi usada.</div>
+      <div class="notice">Opcional. Dá acesso ao app inteiro (igual ao acesso do tutor), sem precisar compartilhar a senha principal <svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><line x1="4" y1="24" x2="44" y2="24" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><ellipse cx="24" cy="24" rx="5" ry="4" fill="var(--primary)" opacity="0.15"/><ellipse cx="21" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="27" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="19.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="28.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="24" cy="27" rx="2" ry="1.5" fill="var(--primary)"/></svg> a única diferença é um aviso "🏥 ✅ Acesso profissional de saúde" que aparece no cabeçalho, para identificar que foi essa senha que foi usada.</div>
       <div class="field"><label>Senha atual (a mesma da entrada normal)</label><input type="password" id="senha-atual-vet"></div>
       <div class="field"><label>Senha do profissional de saúde (deixe em branco para desativar)</label><input type="password" id="senha-vet-nova"></div>
       <button class="btn" onclick="alterarSenhaVet()">Salvar senha do profissional de saúde</button>
@@ -1322,7 +1322,13 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO <svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><line x1="4" y1="24" x2="44" y2="24" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><ellipse cx="24" cy="24" rx="5" ry="4" fill="var(--primary)" opacity="0.15"/><ellipse cx="21" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="27" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="19.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="28.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="24" cy="27" rx="2" ry="1.5" fill="var(--primary)"/></svg> PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev122.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev122.1"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev122.1: revertidos os ícones SVG customizados de volta para os emojis originais, só na
+// tela inicial simplificada (ts-inicio): 🐾 (pata), 🩸 (glicemia), 💉 (insulina), 🆘
+// (emergência), ➡️ (pular), e o "—" que tinha virado um SVG de rostinho por engano no meio
+// do texto "Sinais de hipoglicemia — o que fazer agora". As telas de Glicemia, Insulina e
+// Emergência (ts-glicemia/ts-insulina/ts-emergencia) e o resto do app completo não foram
+// tocados — mudança cirúrgica, escopo confirmado explicitamente pelo usuário.
 // Rev011.0: terceira e (esperamos) definitiva revisão da escala do gauge. Tentativa de escala
 // fixa em 1000 (testada visualmente antes de publicar) deixava a barra quase toda laranja em
 // qualquer configuração realista <svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><line x1="4" y1="24" x2="44" y2="24" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/><ellipse cx="24" cy="24" rx="5" ry="4" fill="var(--primary)" opacity="0.15"/><ellipse cx="21" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="27" cy="22" rx="1.5" ry="1.2" fill="var(--primary)"/><ellipse cx="19.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="28.5" cy="25.5" rx="1.2" ry="1" fill="var(--primary)"/><ellipse cx="24" cy="27" rx="2" ry="1.5" fill="var(--primary)"/></svg> descartada. Escala final: ESCALA_MAX = 3× o alvo máximo,
@@ -2269,14 +2275,14 @@ function aplicarModoAcesso(){
   if(modoAcesso === 'veterinaria' && idBox && !document.getElementById('badge-modo-vet')){
     const badge = document.createElement('span');
     badge.id = 'badge-modo-vet';
-    badge.textContent = '<svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><path d="M4 24 Q24 8 44 24 Q24 40 4 24 Z" fill="var(--primary)" opacity="0.1" stroke="var(--primary)" stroke-width="2.5"/><circle cx="24" cy="24" r="8" fill="var(--surface)" stroke="var(--primary)" stroke-width="2.5"/><circle cx="24" cy="24" r="4" fill="var(--primary)"/><circle cx="26" cy="22" r="1.5" fill="white"/></svg><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="18" fill="var(--target)" opacity="0.15"/><path d="M16 24 L22 30 L32 18" stroke="var(--target)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Acesso profissional de saúde';
+    badge.textContent = '🏥 ✅ Acesso profissional de saúde';
     badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;white-space:nowrap;';
     idBox.appendChild(badge);
   }
   if(modoAcesso === 'engenharia' && idBox && !document.getElementById('badge-modo-eng')){
     const badge = document.createElement('span');
     badge.id = 'badge-modo-eng';
-    badge.textContent = '<svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="18" cy="18" r="10" fill="var(--primary)" opacity="0.1"/><path d="M14 14 L22 22" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/><path d="M22 14 L14 22" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/><circle cx="18" cy="18" r="3" fill="var(--primary)"/><line x1="26" y1="26" x2="38" y2="38" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><line x1="38" y1="26" x2="26" y2="38" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg><svg width="20" height="20" viewBox="0 0 48 48" fill="none" style="vertical-align:middle;margin-right:4px"><circle cx="24" cy="24" r="18" fill="var(--target)" opacity="0.15"/><path d="M16 24 L22 30 L32 18" stroke="var(--target)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Acesso de Engenharia';
+    badge.textContent = '⚙️ ✅ Acesso de Engenharia';
     badge.style.cssText = 'background:var(--accent-tint);color:#8a5c14;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:10px;white-space:nowrap;';
     idBox.appendChild(badge);
   }
