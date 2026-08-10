@@ -1332,7 +1332,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev122.6"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev122.7"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev122.7: corrigido o gráfico aparecendo "grande" por um instante ao fechar o zoom, até piscar
+// e voltar ao tamanho normal. Causa: _fecharZoomComRecarga() chamava document.exitFullscreen()
+// (assíncrono — no Android a saída da tela cheia tem animação própria do sistema) e recarregava
+// a página num timer fixo de 120ms, sem esperar essa animação terminar de verdade; se ela
+// demorasse mais que isso, o reload acontecia no meio do caminho, com o gráfico ainda em tamanho
+// de tela cheia. Agora espera o evento fullscreenchange confirmar a saída antes de recarregar
+// (com teto de 800ms de segurança). Não muda nada no caminho de fechamento sem fullscreen ativo.
 // Rev122.6: corrigido o "flash" da aba Lançar aparecendo por um instante ao fechar o zoom de um
 // gráfico (Semanal/Mensal) — o reload proposital que contorna o bug de repaint do Chrome Android
 // (ver Rev008.3) reabre com a marcação estática "active" da aba Lançar antes do JS confirmar os
@@ -2754,8 +2761,28 @@ function _aplicarEstadoChartExpandido(wrapEl, chartInstance, expandir, rerenderF
 function _fecharZoomComRecarga(){
   const abaAtiva = document.querySelector('nav.tabs button.active');
   if(abaAtiva) sessionStorage.setItem('pitoco_ultima_aba', abaAtiva.dataset.tab);
+  const estavaEmFullscreen = !!document.fullscreenElement;
   _sairFullscreenPaisagem();
-  setTimeout(()=> location.reload(), 120);
+  if(!estavaEmFullscreen){
+    setTimeout(()=> location.reload(), 120);
+    return;
+  }
+  // document.exitFullscreen() é assíncrono — no Android a saída da tela cheia tem uma animação
+  // própria do sistema, que às vezes passa dos 120ms fixos que o código usava antes. Se o reload
+  // disparasse antes dessa animação terminar, o gráfico aparecia "grande" (ainda em tela cheia)
+  // até o próprio reload piscar a tela e só então voltar ao tamanho normal. Agora espera o evento
+  // fullscreenchange confirmar que a saída terminou de verdade antes de recarregar — com um teto
+  // de 800ms de segurança, caso o evento não dispare por algum motivo (navegador sem suporte etc).
+  let jaRecarregou = false;
+  const recarregarUmaVez = ()=>{
+    if(jaRecarregou) return;
+    jaRecarregou = true;
+    document.removeEventListener('fullscreenchange', aoConfirmarSaida);
+    setTimeout(()=> location.reload(), 60);
+  };
+  const aoConfirmarSaida = ()=>{ if(!document.fullscreenElement) recarregarUmaVez(); };
+  document.addEventListener('fullscreenchange', aoConfirmarSaida);
+  setTimeout(recarregarUmaVez, 800);
 }
 // se o usuário sair da tela cheia pelo gesto do próprio sistema (botão voltar, deslizar) enquanto
 // um gráfico está em zoom, recarrega junto, pelo mesmo motivo acima.
