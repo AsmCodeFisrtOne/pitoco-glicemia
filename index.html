@@ -512,7 +512,7 @@ if ('serviceWorker' in navigator) {
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
     <button class="logout" style="margin-top:10px" onclick="fecharApp()">Sair</button>
-    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev122.0</div>
+    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev124.0</div>
   </div>
 </div>
 
@@ -1341,7 +1341,16 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev123.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev124.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev124.0: corrigido bug real — o alerta de efeito Somogyi (aviso de "hiperglicemia de rebote"
+// mostrado na hora do lançamento, dentro de salvarRegistro/customAlertPerigo) disparava para
+// QUALQUER hiperglicemia, mesmo sem nenhuma hipoglicemia real nas 12h anteriores. Causa: a busca
+// por "hipoRecente" não filtrava registros apenasObservacao (glicemia:null) — em JS a comparação
+// "null < configParam.hipo" vira "0 < hipo", que é sempre true. Assim, qualquer observação (não
+// só episódios reais de hipoglicemia) lançada nas 12h antes de uma glicemia alta fazia o alerta
+// disparar incorretamente. Corrigido aplicando o mesmo filtro já usado em
+// _idsComPossivelSomogyi() (!r.apenasObservacao && r.glicemia!=null), que é a função que marca o
+// ícone ⚠️ nos Registros/Relatório mensal e nunca teve esse problema.
 // Rev123.0: corrigido "editar"/"excluir" (e parte das colunas) sumindo na tabela de Histórico
 // por mês no celular. Causa real (diferente do que se pensava nas Rev122.8/122.9): a tabela
 // (Data/hora + Glicemia + Insulina + Obs. + editar/excluir) é naturalmente mais larga que a tela
@@ -3488,7 +3497,12 @@ async function salvarRegistro(){
   if(!ehObs && glicemia > configParam.hiper){
     const janelaMs = 12*60*60*1000;
     const tAtual = new Date(dataGlicemiaISO).getTime();
+    // Rev124.0: bug corrigido — antes não filtrava registros apenasObservacao/glicemia null,
+    // e em JS "null < configParam.hipo" vira "0 < hipo" (sempre true), fazendo QUALQUER
+    // observação nas últimas 12h (não só hipoglicemia real) disparar o aviso de Somogyi.
+    // Mesmo filtro já usado em _idsComPossivelSomogyi().
     const hipoRecente = registros.find(r=>{
+      if(r.apenasObservacao || r.glicemia==null) return false;
       const tHipo = new Date(r.dataGlicemia).getTime();
       return r.glicemia < configParam.hipo && tAtual > tHipo && (tAtual - tHipo) <= janelaMs;
     });
