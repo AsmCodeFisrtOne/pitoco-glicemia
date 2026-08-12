@@ -512,7 +512,7 @@ if ('serviceWorker' in navigator) {
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
     <button class="logout" style="margin-top:10px" onclick="fecharApp()">Sair</button>
-    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev124.0</div>
+    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev125.0</div>
   </div>
 </div>
 
@@ -926,7 +926,7 @@ if ('serviceWorker' in navigator) {
     <div class="card" id="card-senha-vet">
       <h2>Senha de acesso para o profissional de saúde</h2>
       <div class="notice">Opcional. Dá acesso ao app inteiro (igual ao acesso do tutor), sem precisar compartilhar a senha principal — a única diferença é um aviso "🏥 ✅ Acesso profissional de saúde" que aparece no cabeçalho, para identificar que foi essa senha que foi usada.</div>
-      <div class="field"><label>Senha atual (a mesma da entrada normal)</label><input type="password" id="senha-atual-vet"></div>
+      <div class="field"><label>Senha atual (a que você usou para entrar nesta sessão — profissional de saúde ou Engenharia)</label><input type="password" id="senha-atual-vet"></div>
       <div class="field"><label>Senha do profissional de saúde (deixe em branco para desativar)</label><input type="password" id="senha-vet-nova"></div>
       <button class="btn" onclick="alterarSenhaVet()">Salvar senha do profissional de saúde</button>
     </div>
@@ -1341,7 +1341,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev124.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev125.0"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev125.0: corrigido bug real em alterarSenhaVet() — a troca da senha do profissional de saúde
+// exigia a senha do TUTOR como "senha atual", mas esse card só é visível para quem já entrou como
+// veterinária ou engenharia, que por design não têm (nem devem ter) a senha do tutor. Na prática
+// o profissional de saúde nunca conseguia trocar a própria senha. Corrigido para validar contra a
+// senha realmente usada na sessão atual: senhaVet no modo veterinária, SENHA_ENGENHARIA no modo
+// engenharia. Rótulo do campo também corrigido (dizia "a mesma da entrada normal", reforçando o
+// engano).
 // Rev124.0: corrigido bug real — o alerta de efeito Somogyi (aviso de "hiperglicemia de rebote"
 // mostrado na hora do lançamento, dentro de salvarRegistro/customAlertPerigo) disparava para
 // QUALQUER hiperglicemia, mesmo sem nenhuma hipoglicemia real nas 12h anteriores. Causa: a busca
@@ -2602,7 +2609,13 @@ async function alterarSenhaVet(){
   if(modoAcesso !== 'veterinaria' && modoAcesso !== 'engenharia'){ await customAlert('Só o profissional de saúde ou a Engenharia podem alterar essa senha.'); return; }
   const atual = document.getElementById('senha-atual-vet').value;
   const nova = document.getElementById('senha-vet-nova').value;
-  if(atual !== senhaAcesso){ await customAlert('Senha atual incorreta. Nada foi alterado.'); return; }
+  // Rev125.0: bug corrigido — antes exigia sempre a senha do TUTOR (senhaAcesso) como "senha
+  // atual", mas esse card só aparece pra quem já está logado como veterinária/engenharia, que
+  // por design não tem (nem deve ter) a senha do tutor. Agora valida contra a senha que a pessoa
+  // de fato usou para entrar nesta sessão: senhaVet no modo veterinária, SENHA_ENGENHARIA no modo
+  // engenharia.
+  const senhaEsperada = modoAcesso === 'engenharia' ? SENHA_ENGENHARIA : senhaVet;
+  if(!senhaEsperada || atual !== senhaEsperada){ await customAlert('Senha atual incorreta. Nada foi alterado.'); return; }
   if(nova && nova.length < 4){ await customAlert('A senha do profissional de saúde precisa ter pelo menos 4 caracteres (ou deixe em branco para desativar).'); return; }
   if(nova && nova === senhaAcesso){ await customAlert('A senha do profissional de saúde precisa ser diferente da senha principal.'); return; }
   db.collection('config').doc('acesso').set({senhaVet: nova || null}, {merge:true}).then(async ()=>{
