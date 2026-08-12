@@ -152,7 +152,7 @@ header.top .id{display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:6
 header.top .paw{width:38px;height:38px;border-radius:10px;object-fit:cover;}
 header.top h1{font-size:20px;margin:0;line-height:1.1;}
 header.top .sub{font-size:12px;color:var(--muted);}
-header.top .logout{background:none;border:1px solid var(--line);color:var(--muted);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+header.top .logout{background:none;border:2px solid var(--line);color:var(--muted);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
 
 nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--line);}
 nav.tabs button{flex:none;background:none;border:none;padding:9px 13px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;}
@@ -512,7 +512,7 @@ if ('serviceWorker' in navigator) {
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
     <button class="logout" style="margin-top:10px" onclick="fecharApp()">Sair</button>
-    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev125.2</div>
+    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev125.3</div>
   </div>
 </div>
 
@@ -520,7 +520,7 @@ if ('serviceWorker' in navigator) {
 <div id="tela-simples">
   <!-- ---- VISTA: INÍCIO (3 botões grandes) ---- -->
   <div class="ts-vista ativa" id="ts-inicio">
-    <button style="position:absolute;top:22px;right:20px;background:none;border:1px solid var(--line);color:var(--muted);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px" onclick="logout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12h11" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M8 7l-5 5 5 5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Logoff</button>
+    <button style="position:absolute;top:22px;right:20px;background:none;border:2px solid var(--line);color:var(--muted);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px" onclick="logout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12h11" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M8 7l-5 5 5 5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Logoff</button>
     <div class="ts-topo">
       <div style="width:52px;height:52px;border-radius:14px;background:var(--primary-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🐾</div>
       <h1><span class="nome-pet-dinamico">Pitoco</span></h1>
@@ -1341,7 +1341,9 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev125.2"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev125.3"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev125.3: borda do botão "Logoff" (tela simples e header padrão) engrossada de 1px para 2px,
+// a pedido do usuário. Nenhuma outra mudança.
 // Rev125.2: ícone de saída (porta + seta) adicionado nos dois botões "Logoff" (tela simples do
 // tutor e header padrão), baseado em referência visual enviada pelo usuário. SVG inline, stroke
 // currentColor, fill:none — sem fundo, herda a cor de texto do botão (--muted). Nenhuma mudança
