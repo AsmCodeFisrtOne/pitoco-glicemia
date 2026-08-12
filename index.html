@@ -153,6 +153,12 @@ header.top .paw{width:38px;height:38px;border-radius:10px;object-fit:cover;}
 header.top h1{font-size:20px;margin:0;line-height:1.1;}
 header.top .sub{font-size:12px;color:var(--muted);}
 header.top .logout{background:none;border:2px solid var(--line);color:var(--muted);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+/* Rev125.4: no celular, o header quebra em duas linhas (id do pet em cima, logout embaixo) e
+   como o logout fica sozinho na sua linha, justify-content:space-between o gruda na esquerda.
+   Empurra pra direita só abaixo do breakpoint desktop (820px), sem afetar o layout de desktop. */
+@media (max-width:819px){
+  header.top .logout{margin-left:auto;}
+}
 
 nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--line);}
 nav.tabs button{flex:none;background:none;border:none;padding:9px 13px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;}
@@ -512,7 +518,7 @@ if ('serviceWorker' in navigator) {
     <button onclick="tryLogin()">Entrar</button>
     <div class="err" id="gate-err"></div>
     <button class="logout" style="margin-top:10px" onclick="fecharApp()">Sair</button>
-    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev125.3</div>
+    <div id="gate-version" style="font-size:10px;color:#9fb3b1;margin-top:6px;">Beta_Rev125.4</div>
   </div>
 </div>
 
@@ -1341,7 +1347,14 @@ if ('serviceWorker' in navigator) {
    CONFIGURAÇÃO — PREENCHER ANTES DE PUBLICAR
    ========================================================= */
 const SENHA_PADRAO = "Pitoco"; // usada apenas na primeira vez, antes de qualquer senha ser salva no banco
-const APP_VERSION = "Beta_Rev125.3"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+const APP_VERSION = "Beta_Rev125.4"; // formato correto: a cada +0.1, ao passar de .9 volta para .0 e o número inteiro sobe (ex: 002.9 -> 003.0)
+// Rev125.4: botão "Logoff" do header padrão deslocado para a direita no celular. Causa: o header
+// (header.top, display:flex + justify-content:space-between + flex-wrap:wrap) quebra em duas
+// linhas em telas estreitas — o bloco "id" (logo/nome/badge) ocupa a primeira linha sozinho, e o
+// botão Logoff sobra sozinho na segunda linha, onde space-between não tem o que espaçar e ele
+// gruda na esquerda. Corrigido com margin-left:auto só abaixo de 820px (mesmo breakpoint
+// desktop/mobile já usado no resto do app), sem alterar o layout de desktop, onde as duas linhas
+// cabem lado a lado normalmente.
 // Rev125.3: borda do botão "Logoff" (tela simples e header padrão) engrossada de 1px para 2px,
 // a pedido do usuário. Nenhuma outra mudança.
 // Rev125.2: ícone de saída (porta + seta) adicionado nos dois botões "Logoff" (tela simples do
